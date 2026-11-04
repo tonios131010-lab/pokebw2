@@ -9,7 +9,7 @@
 
 // The blocks of a Black or White save that are read
 #define WB_SAVE_BLOCK_PLAYER 27
-#define WB_SAVE_BLOCK_UNK42 42
+#define WB_SAVE_BLOCK_MUSICAL 42
 #define WB_SAVE_BLOCK_EVENT_WORK 45
 #define WB_SAVE_BLOCK_UNK52 52
 #define WB_SAVE_BLOCK_UNK66 66
@@ -96,7 +96,7 @@ static void WBSaveConvert_ReadPlayer(void *save, WBSavePlayer *player) {
 static void WBSaveConvert_ReadMemories(void *save, WBSaveMemories *memories) {
     u8 *eventWork;
     u32 *unk52;
-    u8 *unk42;
+    u8 *musical;
     u32 i;
 
     MI_CpuFill8(memories, 0, sizeof(WBSaveMemories));
@@ -124,9 +124,9 @@ static void WBSaveConvert_ReadMemories(void *save, WBSaveMemories *memories) {
     for (i = 0; i < NELEMS(sEventVars); i++) {
         memories->vars[sEventVars[i].index] = ((u16 *)eventWork)[sEventVars[i].var - WB_EVENT_WORK_VARS_START];
     }
-    unk42 = WBSaveBlock_Get(save, WB_SAVE_BLOCK_UNK42);
-    MI_CpuCopy8(unk42 + 0x258, memories->props, sizeof(memories->props));
-    memories->musicalTotalPoints = *(u16 *)(unk42 + 0x256);
-    memories->musicalShowCount = *(u16 *)(unk42 + 0x252);
+    musical = WBSaveBlock_Get(save, WB_SAVE_BLOCK_MUSICAL);
+    MI_CpuCopy8(musical + 0x258, memories->props, sizeof(memories->props));
+    memories->musicalTotalPoints = *(u16 *)(musical + 0x256);
+    memories->musicalShowCount = *(u16 *)(musical + 0x252);
     MI_CpuCopy8(WBSaveBlock_Get(save, WB_SAVE_BLOCK_UNK66), memories->unk2C, sizeof(memories->unk2C));
 }
