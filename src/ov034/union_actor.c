@@ -140,7 +140,8 @@ BOOL UnionOneself_CanTalkTo(UnionSystem *unisys, u16 id) {
     for (i = 0; i < UNION_ACTOR_MAX; i++, slot++) {
         if (slot->used == 1 && slot->entry != NULL && slot->entry->timeout != 0 &&
             id == (slot->entry->index << 8 | (slot->member + UNION_ACTOR_ID_MEMBER_BASE))) {
-            if (slot->step == 2 || slot->step == 1 || slot->nextStep == 1 || slot->nextStep == 2) {
+            if (slot->step == UNION_ACTOR_STEP_LEAVE || slot->step == UNION_ACTOR_STEP_APPEAR ||
+                slot->nextStep == UNION_ACTOR_STEP_APPEAR || slot->nextStep == UNION_ACTOR_STEP_LEAVE) {
                 return FALSE;
             }
             return TRUE;
@@ -212,8 +213,8 @@ static void UnionOneself_UpdateEntryActors(UnionSystem *unisys, RivalDataSave *r
             GFL_STD_MemCmp(ownMac, entry->beacon.members[i].mac, 6) != 0 &&
             UnionOneself_IsMemberNew(unisys, entry, entry->beacon.members[i].mac)) {
             entry->actor[i] = UnionOneself_CreateActorSlot(unisys, entry, &entry->beacon.members[i], i, FALSE, &actor);
-            entry->actor[i]->step = 1;
-            UnionOneself_SetActorNextStep(entry->actor[i], 0);
+            entry->actor[i]->step = UNION_ACTOR_STEP_APPEAR;
+            UnionOneself_SetActorNextStep(entry->actor[i], UNION_ACTOR_STEP_IDLE);
             if (i == 0) {
                 if (UnionEff_IsFriendBeacon(wifiList, &entry->beacon) == TRUE) {
                     UnionEff_AddMark(effWork, actor, 0);
@@ -344,11 +345,11 @@ static BOOL UnionOneself_RunActor(UnionSystem *unisys, UnionActorSlot *slot, Fie
     if (done == TRUE) {
         slot->seq = 0;
         slot->phase++;
-        if (slot->phase > 2) {
-            if (slot->step == 2) {
+        if (slot->phase > UNION_PHASE_END) {
+            if (slot->step == UNION_ACTOR_STEP_LEAVE) {
                 return FALSE;
             }
-            slot->phase = 0;
+            slot->phase = UNION_PHASE_BEGIN;
             slot->step = slot->nextStep;
             slot->nextStep = 0;
         }
@@ -401,16 +402,16 @@ static BOOL UnionOneself_ActorIdle(UnionSystem *unisys, UnionActorSlot *slot, Fi
     u32 beaconAct;
 
     if (entry->timeout == 0) {
-        UnionOneself_SetActorNextStep(slot, 2);
+        UnionOneself_SetActorNextStep(slot, UNION_ACTOR_STEP_LEAVE);
         return TRUE;
     }
     if (entry->beacon.members[slot->member].used == 0 || slot->look != entry->beacon.members[slot->member].look) {
-        UnionOneself_SetActorNextStep(slot, 2);
+        UnionOneself_SetActorNextStep(slot, UNION_ACTOR_STEP_LEAVE);
         return TRUE;
     }
     beaconAct = UnionEff_GetKindStep(entry->beacon.activity);
     if (situ->mycomm.unk44 == UnionOneself_GetActorId(slot->entry, slot)) {
-        UnionOneself_SetActorNextStep(slot, 3);
+        UnionOneself_SetActorNextStep(slot, UNION_ACTOR_STEP_TALK);
         return TRUE;
     }
     if (situ->wantedKind != UNION_WANT_NONE &&

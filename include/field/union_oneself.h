@@ -70,9 +70,13 @@ enum {
 
 #define UNION_STEP_FOR_ACTIVITY(activity) ((activity) + 11)
 
-// The activities that this file names; the others are a number of the menu
+// The activities that this file names; the others are a number of the menu. The battles are the activities from
+// UNION_ACTIVITY_BATTLE_FIRST to UNION_ACTIVITY_BATTLE_LAST, two for each regulation file
 enum {
-    UNION_ACTIVITY_TRADE = 0x18,
+    UNION_ACTIVITY_DRAW = 3,
+    UNION_ACTIVITY_BATTLE_FIRST,
+    UNION_ACTIVITY_BATTLE_LAST = 0x17,
+    UNION_ACTIVITY_TRADE,
     UNION_ACTIVITY_EGG_TRADE,
     UNION_ACTIVITY_NONE = 0x1b,
 };

@@ -250,8 +250,8 @@ u8 UnionOneself_RunStep(UnionSystem *unisys, Field *field) {
     if (done == TRUE) {
         situ->seq = 0;
         situ->phase++;
-        if (situ->phase > 2) {
-            situ->phase = 0;
+        if (situ->phase > UNION_PHASE_END) {
+            situ->phase = UNION_PHASE_BEGIN;
             situ->prevStep = situ->step;
             situ->step = situ->nextStep;
             situ->nextStep = 0;
@@ -266,7 +266,7 @@ static BOOL UnionOneself_SetNextStep(UnionSystem *unisys, u32 step) {
 }
 
 static BOOL UnionOneself_SetNextStepIfRunning(UnionSystem *unisys, u32 step) {
-    if (unisys->situ.phase == 1) {
+    if (unisys->situ.phase == UNION_PHASE_RUN) {
         return UnionOneself_SetNextStep(unisys, step);
     }
     return FALSE;
@@ -329,7 +329,7 @@ static BOOL UnionOneself_IsDoubleActivity(u32 activity) {
 }
 
 static BOOL UnionOneself_IsBattleActivity(u32 activity) {
-    if (activity < 4 || activity > 0x17) {
+    if (activity < UNION_ACTIVITY_BATTLE_FIRST || activity > UNION_ACTIVITY_BATTLE_LAST) {
         return FALSE;
     }
     return TRUE;

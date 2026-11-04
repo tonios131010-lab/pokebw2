@@ -84,6 +84,21 @@ typedef struct {
 
 #define UNION_ACTOR_MAX 50
 
+// The phases of a step (UnionActorSlot.phase, UnionSelf.phase): the function to begin it, to run it, to end it
+enum {
+    UNION_PHASE_BEGIN,
+    UNION_PHASE_RUN,
+    UNION_PHASE_END,
+};
+
+// The steps of a heard player's actor (UnionActorSlot.step), the rows of union_actor.c's table
+enum {
+    UNION_ACTOR_STEP_IDLE,
+    UNION_ACTOR_STEP_APPEAR,
+    UNION_ACTOR_STEP_LEAVE,
+    UNION_ACTOR_STEP_TALK,
+};
+
 // A beacon heard from another machine
 typedef struct UnionBeaconEntry {
     UnionBeacon beacon;
@@ -143,7 +158,7 @@ typedef struct {
     s16 result;
     u8 prevStep;
     u8 nextStep;
-    u8 phase; // of the step: 0 entering, 1 running, 2 leaving
+    u8 phase; // of the step: UNION_PHASE_*
     u8 seq;
     u8 mac78[6]; // the player to show the focus effect on
 } UnionSelf;

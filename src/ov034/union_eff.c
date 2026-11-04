@@ -6,6 +6,7 @@
 #include "field/field.h"
 #include "field/field_actor.h"
 #include "field/player_state.h"
+#include "field/union_oneself.h"
 #include "gfl/arc.h"
 #include "gfl/g3d.h"
 #include "gfl/heap.h"
@@ -100,15 +101,15 @@ BOOL UnionEff_IsPlayerOnSpot(Field *field) {
 }
 
 int UnionEff_GetKindStep(int kind) {
-    if (kind >= 4 && kind <= 0x17) {
+    if (kind >= UNION_ACTIVITY_BATTLE_FIRST && kind <= UNION_ACTIVITY_BATTLE_LAST) {
         return UNION_WANT_BATTLE;
     }
     switch (kind) {
-    case 3:
+    case UNION_ACTIVITY_DRAW:
         return UNION_WANT_DRAW;
-    case 0x18:
+    case UNION_ACTIVITY_TRADE:
         return UNION_WANT_TRADE;
-    case 0x19:
+    case UNION_ACTIVITY_EGG_TRADE:
         return UNION_WANT_SPIN_TRADE;
     case 0x1a:
         return UNION_WANT_3;
