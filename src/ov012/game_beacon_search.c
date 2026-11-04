@@ -15,13 +15,20 @@
 #include "system/game_system.h"
 
 // The beacon this game sends, and reads from others
+// What a beacon carries: a joinable network, or a GameBeacon to receive
+typedef enum {
+    BEACON_SEARCH_KIND_NONE,
+    BEACON_SEARCH_KIND_JOINABLE,
+    BEACON_SEARCH_KIND_GAME_BEACON,
+} BeaconSearchKind;
+
 typedef struct {
     u8 type;
     u8 connectNum : 4;
     u8 connectMax : 4;
     // Set when this machine's network has had an error: such a beacon is never joined
     u8 netError : 1;
-    u8 unk2_1 : 5;
+    u8 kind : 5;
     // Set on a DSi whose parental controls (bits 0 and 5 of its OS info) are on
     u8 parentalControl : 1;
     u8 isDSi : 1;
@@ -229,7 +236,7 @@ static BeaconSearchFound *GameBeaconSearch_ScanBeacons(BeaconSearchWork *work, i
         if (beacon != NULL) {
             if (beacon->netError) {
                 NetWhpipe_ConsumeBeacon(*index);
-            } else if (beacon->unk2_1 == 1) {
+            } else if (beacon->kind == BEACON_SEARCH_KIND_JOINABLE) {
                 MI_CpuFill8(found, 0, sizeof(BeaconSearchFound));
                 found->type = beacon->type;
                 found->connectNum = beacon->connectNum;
@@ -238,7 +245,7 @@ static BeaconSearchFound *GameBeaconSearch_ScanBeacons(BeaconSearchWork *work, i
                 for (i = 0; i < 6; i++) {
                     found->mac[i] = mac[i];
                 }
-            } else if (beacon->unk2_1 == 2) {
+            } else if (beacon->kind == BEACON_SEARCH_KIND_GAME_BEACON) {
                 GameBeaconSys_Receive(&beacon->data);
                 NetWhpipe_ConsumeBeacon(*index);
             }
@@ -291,7 +298,7 @@ static void *GameBeaconSearch_GetSendBeacon(void *work) {
 
     GameBeaconSearch_SetupBeacon(&search->beacon, search->gameData, search->commSys);
     GameBeaconSys_GetSendBeacon(&search->beacon.data);
-    search->beacon.unk2_1 = 2;
+    search->beacon.kind = BEACON_SEARCH_KIND_GAME_BEACON;
     return &search->beacon;
 }
 
@@ -304,7 +311,7 @@ static void GameBeaconSearch_SetupBeacon(BeaconSearchBeacon *beacon, GameData *g
     beacon->connectNum = GFL_NetGetNegotiatedCount();
     beacon->connectMax = 3;
     beacon->netError = NetSystem_HasErrorChecked();
-    beacon->unk2_1 = 0;
+    beacon->kind = BEACON_SEARCH_KIND_NONE;
     beacon->inResearchOrMission = GameCommSys_IsInResearchGraphOrMission(commSys);
     beacon->trainerId = getIDAsUInt(GetGameDataPlayerInfo(gameData));
     beacon->isDSi = OS_IsRunOnTwl();
