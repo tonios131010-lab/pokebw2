@@ -94,12 +94,15 @@ typedef struct {
 
 // One entry of a Pokestar Studios movie's script
 typedef struct {
-    s16 unk00;
-    s16 unk02;
+    // The turn the scene plays on, or 100 or 101 for a scene that ends the movie
+    s16 turn;
+    s16 requiredChoice;
     s16 unk04;
-    s16 unk06;
-    s16 unk08;
-    s16 unk0A;
+    s16 triggerValue;
+    // Which row of the audience reactions the scene's choices use
+    s16 reactionGroup;
+    // What the scene adds to the score
+    s16 points;
     // The messages of two kinds, by step, which the cut-ins' message command picks between
     s16 messages[2][10];
     // The script event each step waits for, -1 for none
@@ -116,17 +119,21 @@ typedef struct {
 typedef struct {
     s16 movie;
     u8 unk02[2];
-    s16 unk04;
+    // The factor that the movie's score is multiplied by
+    s16 scoreMultiplier;
     s16 unk06;
     // Which of the studio's message files the movie uses
-    s16 unk08;
+    s16 msgFile;
     s16 turnLimit;
-    s16 unk0C;
-    s16 unk0E;
+    // The turn that scores the most points for ending the battle
+    s16 bestTurn;
+    // The scene that gives the bad ending
+    s16 badEndingScene;
     s16 rule;
     s16 species1;
     s16 species2;
-    s16 unk16;
+    // The move that has to defeat the target for the rule to be won
+    s16 winMove;
     u8 unk18[0xc];
     // btlv_effect.c passes it to the field
     s16 unk24;
