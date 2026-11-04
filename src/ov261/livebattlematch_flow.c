@@ -124,7 +124,7 @@ LiveBattleMatchFlow *LiveBattleMatchFlow_Create(const LiveBattleMatchFlowParam *
     wk->entry = TournamentBlock_GetEntry(getTournamentBlockAddress(GameData_GetSaveControl(wk->param.gameData)), 1);
     wk->record = RecordSave_GetLiveMatch(getRecordBlkAddress(GameData_GetSaveControl(wk->param.gameData)));
     wk->party = PokeParty_Create(heapId);
-    if (wk->param.mode == 0) {
+    if (wk->param.mode == LIVE_BATTLE_MATCH_FLOW_MODE_JOIN) {
         GCTX_HIDBlockSoftReset(8);
     }
     return wk;
@@ -132,7 +132,7 @@ LiveBattleMatchFlow *LiveBattleMatchFlow_Create(const LiveBattleMatchFlowParam *
 
 void LiveBattleMatchFlow_Delete(LiveBattleMatchFlow *wk) {
     GFL_HeapFree(wk->party);
-    if (wk->result == 1) {
+    if (wk->result == LIVE_BATTLE_MATCH_FLOW_RESULT_MENU) {
         GCTX_HIDUnblockSoftReset(8);
     }
     LiveBattleMatchFlow_PlayerCardDelete(wk);
@@ -286,7 +286,7 @@ static void LiveBattleMatchFlow_StepEntry(WifiBattleMatchTask *task, u32 *seq, v
         break;
     case 11:
         LiveBattleMatchFlow_PlayerCardDelete(wk);
-        LiveBattleMatchFlow_Exit(wk, 1);
+        LiveBattleMatchFlow_Exit(wk, LIVE_BATTLE_MATCH_FLOW_RESULT_MENU);
         break;
     case 12:
         LiveBattleMatchFlow_PrintAndWait(wk, task, seq, 2, TRUE, 31, 13);
@@ -416,7 +416,7 @@ static void LiveBattleMatchFlow_StepEntry(WifiBattleMatchTask *task, u32 *seq, v
         WifiBattleMatchTask_SetFunc(task, LiveBattleMatchFlow_StepTeam);
         break;
     case 30:
-        LiveBattleMatchFlow_Exit(wk, 1);
+        LiveBattleMatchFlow_Exit(wk, LIVE_BATTLE_MATCH_FLOW_RESULT_MENU);
         break;
     case 31:
         if (LiveBattleMatchFlow_IsMessageDone(wk)) {
@@ -614,7 +614,7 @@ static void LiveBattleMatchFlow_StepTeam(WifiBattleMatchTask *task, u32 *seq, vo
         break;
     }
     case 20:
-        LiveBattleMatchFlow_Exit(wk, 1);
+        LiveBattleMatchFlow_Exit(wk, LIVE_BATTLE_MATCH_FLOW_RESULT_MENU);
         break;
     case 21:
         if (LiveBattleMatchFlow_IsMessageDone(wk)) {
@@ -793,13 +793,13 @@ static void LiveBattleMatchFlow_StepMenu(WifiBattleMatchTask *task, u32 *seq, vo
         LiveBattleMatchFlow_PrintAndWait(wk, task, seq, 34, TRUE, 25, 5);
         break;
     case 22:
-        LiveBattleMatchFlow_Exit(wk, 4);
+        LiveBattleMatchFlow_Exit(wk, LIVE_BATTLE_MATCH_FLOW_RESULT_REPLAY);
         break;
     case 23:
         WifiBattleMatchTask_SetFunc(task, LiveBattleMatchFlow_StepLink);
         break;
     case 24:
-        LiveBattleMatchFlow_Exit(wk, 1);
+        LiveBattleMatchFlow_Exit(wk, LIVE_BATTLE_MATCH_FLOW_RESULT_MENU);
         break;
     case 25:
         if (LiveBattleMatchFlow_IsMessageDone(wk)) {
@@ -846,10 +846,10 @@ static void LiveBattleMatchFlow_StepLink(WifiBattleMatchTask *task, u32 *seq, vo
     case 3:
         linked = LiveBattleMatchIrc_StepLink(wk->irc);
         switch (linked) {
-        case 1:
+        case LIVEBATTLEMATCH_IRC_LINK_CONNECTED:
             *seq = 13;
             break;
-        case 2:
+        case LIVEBATTLEMATCH_IRC_LINK_LEFT:
             *seq = 9;
             break;
         }
@@ -1042,7 +1042,7 @@ static void LiveBattleMatchFlow_StepLink(WifiBattleMatchTask *task, u32 *seq, vo
         }
         break;
     case 38:
-        LiveBattleMatchFlow_Exit(wk, 2);
+        LiveBattleMatchFlow_Exit(wk, LIVE_BATTLE_MATCH_FLOW_RESULT_TEAM_LIST);
         break;
     case 39:
         WifiBattleMatchTask_SetFunc(task, LiveBattleMatchFlow_StepMenu);
@@ -1129,7 +1129,7 @@ static void LiveBattleMatchFlow_StepRecord(WifiBattleMatchTask *task, u32 *seq, 
         }
         break;
     case 7:
-        LiveBattleMatchFlow_Exit(wk, 3);
+        LiveBattleMatchFlow_Exit(wk, LIVE_BATTLE_MATCH_FLOW_RESULT_RESULT);
         break;
     case 8:
         if (LiveBattleMatchFlow_IsMessageDone(wk)) {
@@ -1244,10 +1244,10 @@ static void LiveBattleMatchFlow_StepQuit(WifiBattleMatchTask *task, u32 *seq, vo
         LiveBattleMatchFlow_PrintAndWait(wk, task, seq, 34, TRUE, 17, 6);
         break;
     case 14:
-        LiveBattleMatchFlow_Exit(wk, 4);
+        LiveBattleMatchFlow_Exit(wk, LIVE_BATTLE_MATCH_FLOW_RESULT_REPLAY);
         break;
     case 15:
-        LiveBattleMatchFlow_Exit(wk, 1);
+        LiveBattleMatchFlow_Exit(wk, LIVE_BATTLE_MATCH_FLOW_RESULT_MENU);
         break;
     case 16:
         WifiBattleMatchTask_SetFunc(task, LiveBattleMatchFlow_StepMenu);
@@ -1357,7 +1357,7 @@ static BOOL LiveBattleMatchFlow_IsMessageDone(LiveBattleMatchFlow *wk) {
     return WifiBattleMatchMsgBox_IsDone(wk->param.msgBox);
 }
 
-// Ends the flow with a result: 1 to 4
+// Ends the flow with a LIVE_BATTLE_MATCH_FLOW_RESULT_*
 static void LiveBattleMatchFlow_Exit(LiveBattleMatchFlow *wk, u32 result) {
     wk->result = result;
     WifiBattleMatchTask_SetFunc(wk->task, LiveBattleMatchFlow_StepEnd);

@@ -37,10 +37,13 @@ enum {
 };
 
 // What the process ends with: 0 if the player left the menu and 1 if they joined the Wi-Fi competition. The live
-// competition's flow gives 2, 3 or 4, which the process passes on
+// competition's flow gives the others, which the process passes on
 enum {
     BATTLE_CHAMPIONSHIP_FLOW_RESULT_EXIT,
     BATTLE_CHAMPIONSHIP_FLOW_RESULT_WIFI,
+    BATTLE_CHAMPIONSHIP_FLOW_RESULT_TEAM_LIST,
+    BATTLE_CHAMPIONSHIP_FLOW_RESULT_RESULT,
+    BATTLE_CHAMPIONSHIP_FLOW_RESULT_REPLAY,
 };
 
 extern const GameProcFunctions BATTLE_CHAMPIONSHIP_FLOW_PROC_FUNCTIONS;

@@ -123,6 +123,41 @@ void LiveBattleMatchIrc_Delete(LiveBattleMatchIrc *irc) {
 void LiveBattleMatchIrc_Main(LiveBattleMatchIrc *irc) {
 }
 
+// The steps that connect, cancel, end and receive the delivery, in irc->state
+enum {
+    LINK_INIT,
+    LINK_WAIT_INIT,
+    LINK_ADD_COMMANDS,
+    LINK_CONNECT,
+    LINK_WAIT_CONNECT,
+    LINK_CONNECTED,
+    LINK_LEFT,
+};
+
+enum {
+    CANCEL_EXIT,
+    CANCEL_WAIT_EXIT,
+    CANCEL_DONE,
+};
+
+enum {
+    END_EXIT,
+    END_WAIT_EXIT,
+    END_DONE,
+};
+
+enum {
+    DELIVERY_START,
+    DELIVERY_WAIT_RESULT,
+    DELIVERY_END,
+    DELIVERY_WAIT_NET_END,
+};
+
+enum {
+    DELIVERY_END_STOP,
+    DELIVERY_END_WAIT_NET_END,
+};
+
 BOOL LiveBattleMatchIrc_CheckError(LiveBattleMatchIrc *irc) {
     if (GFL_NetErrCheck()) {
         if (irc->p_delivery != NULL) {
@@ -147,37 +182,37 @@ int LiveBattleMatchIrc_StepLink(LiveBattleMatchIrc *irc) {
     case 0:
         GFL_NetInit(&sLiveBattleMatchIrcNetInit, NULL, NULL);
         sLiveBattleMatchIrcIsLinked = TRUE;
-        irc->state = 1;
+        irc->state = LINK_WAIT_INIT;
         break;
     case 1:
         if (GFL_NetIsInitialized()) {
-            irc->state = 2;
+            irc->state = LINK_ADD_COMMANDS;
         }
         break;
     case 2:
         NetCommand_AddTable(LIVEBATTLEMATCH_IRC_COMMAND_PLAYER_DATA, sLiveBattleMatchIrcCommands,
                             LIVEBATTLEMATCH_IRC_COMMAND_NUM, irc);
         NetDevIrc_SetPeerFilter(LiveBattleMatchIrc_OnLinkChanged);
-        irc->state = 3;
+        irc->state = LINK_CONNECT;
         break;
     case 3:
         GFL_NetChangeoverConnect(NULL);
-        irc->state = 4;
+        irc->state = LINK_WAIT_CONNECT;
         break;
     case 4:
         if (GFL_NetGetNegotiatedCount() > 1) {
-            irc->state = 5;
+            irc->state = LINK_CONNECTED;
         }
         if (!sLiveBattleMatchIrcIsLinked) {
-            irc->state = 6;
+            irc->state = LINK_LEFT;
         }
         break;
     case 5:
         NetDevIrc_SetPeerFilter(NULL);
-        return 1;
+        return LIVEBATTLEMATCH_IRC_LINK_CONNECTED;
     case 6:
         NetDevIrc_SetPeerFilter(NULL);
-        return 2;
+        return LIVEBATTLEMATCH_IRC_LINK_LEFT;
     }
     return 0;
 }
@@ -195,14 +230,14 @@ BOOL LiveBattleMatchIrc_StepCancel(LiveBattleMatchIrc *irc) {
     case 0:
         if (GFL_NetIsInitialized()) {
             GFL_NetExit(NULL);
-            irc->state = 1;
+            irc->state = CANCEL_WAIT_EXIT;
         } else {
-            irc->state = 2;
+            irc->state = CANCEL_DONE;
         }
         break;
     case 1:
         if (GFL_NetIsEnded()) {
-            irc->state = 2;
+            irc->state = CANCEL_DONE;
         }
         break;
     case 2:
@@ -221,11 +256,11 @@ BOOL LiveBattleMatchIrc_StepEnd(LiveBattleMatchIrc *irc) {
     case 0:
         NetCommand_RemoveTable(LIVEBATTLEMATCH_IRC_COMMAND_PLAYER_DATA);
         GFL_NetExit(NULL);
-        irc->state = 1;
+        irc->state = END_WAIT_EXIT;
         break;
     case 1:
         if (GFL_NetIsEnded()) {
-            irc->state = 2;
+            irc->state = END_DONE;
         }
         break;
     case 2:

@@ -27,10 +27,17 @@ void LiveBattleMatchIrc_Delete(LiveBattleMatchIrc *irc);
 void LiveBattleMatchIrc_Main(LiveBattleMatchIrc *irc);
 // Checks for a network error, and if there is one, ends the delivery and the network's error screen and returns TRUE
 BOOL LiveBattleMatchIrc_CheckError(LiveBattleMatchIrc *irc);
+enum {
+    LIVEBATTLEMATCH_IRC_LINK_WAITING,
+    // The other machine connected
+    LIVEBATTLEMATCH_IRC_LINK_CONNECTED,
+    // The other machine left first
+    LIVEBATTLEMATCH_IRC_LINK_LEFT,
+};
+
 // Resets the connection's steps, then TRUE
 BOOL LiveBattleMatchIrc_ResetLink(LiveBattleMatchIrc *irc);
-// Starts the infrared network and waits for the other machine: 0 while it goes on, 1 once connected, 2 if the other
-// machine left first
+// Starts the infrared network and waits for the other machine: 0 while it goes on, then a LIVEBATTLEMATCH_IRC_LINK_*
 int LiveBattleMatchIrc_StepLink(LiveBattleMatchIrc *irc);
 // Deletes the commands and the callback
 void LiveBattleMatchIrc_CancelLink(LiveBattleMatchIrc *irc);

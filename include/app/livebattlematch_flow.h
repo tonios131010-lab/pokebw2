@@ -34,6 +34,24 @@ typedef struct {
     WifiBattleMatchBattleResult *matchResult;
 } LiveBattleMatchFlowParam;
 
+// The ways in (LiveBattleMatchFlowParam.mode)
+enum {
+    LIVE_BATTLE_MATCH_FLOW_MODE_JOIN,
+    LIVE_BATTLE_MATCH_FLOW_MODE_MENU,
+    LIVE_BATTLE_MATCH_FLOW_MODE_AFTER_MATCH,
+    LIVE_BATTLE_MATCH_FLOW_MODE_QUIT,
+};
+
+// Why the flow ended, once LiveBattleMatchFlow_GetResult is not 0: back to the menu, or on to the team list, the
+// result or the replay of overlay 290's chain
+enum {
+    LIVE_BATTLE_MATCH_FLOW_RESULT_NONE,
+    LIVE_BATTLE_MATCH_FLOW_RESULT_MENU,
+    LIVE_BATTLE_MATCH_FLOW_RESULT_TEAM_LIST,
+    LIVE_BATTLE_MATCH_FLOW_RESULT_RESULT,
+    LIVE_BATTLE_MATCH_FLOW_RESULT_REPLAY,
+};
+
 LiveBattleMatchFlow *LiveBattleMatchFlow_Create(const LiveBattleMatchFlowParam *param, HeapID heapId);
 void LiveBattleMatchFlow_Delete(LiveBattleMatchFlow *flow);
 // Called every frame
