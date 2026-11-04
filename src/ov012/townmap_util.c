@@ -15,6 +15,13 @@
 
 // The Union Room, the Plasma Frigate, the Hidden Grottoes and the Black Tower or White Treehollow with Black City's or
 // White Forest's gates show on the map where the player entered them, or where the game state puts them
+typedef enum {
+    PLASMA_FRIGATE_LOCATION_PWT,
+    PLASMA_FRIGATE_LOCATION_ROUTE_21,
+    PLASMA_FRIGATE_LOCATION_GIANT_CHASM,
+    PLASMA_FRIGATE_LOCATION_FRIGATE_ZONE,
+} PlasmaFrigateLocation;
+
 u16 TownMap_GetMapZone(GameData *gameData, u16 zoneId) {
     u16 parent = GetZoneParentZone(zoneId);
 
@@ -24,13 +31,13 @@ u16 TownMap_GetMapZone(GameData *gameData, u16 zoneId) {
     if (parent == ZONE_PLASMA_FRIGATE) {
         switch (*EventWork_GetWkPtr(GameData_GetEventWork(gameData), EVENT_WORK_PLASMA_FRIGATE_LOCATION)) {
         default:
-        case 0:
+        case PLASMA_FRIGATE_LOCATION_PWT:
             return ZONE_PWT;
-        case 1:
+        case PLASMA_FRIGATE_LOCATION_ROUTE_21:
             return ZONE_ROUTE_21;
-        case 2:
+        case PLASMA_FRIGATE_LOCATION_GIANT_CHASM:
             return ZONE_GIANT_CHASM;
-        case 3:
+        case PLASMA_FRIGATE_LOCATION_FRIGATE_ZONE:
             return ZONE_PLASMA_FRIGATE;
         }
     }
@@ -71,7 +78,8 @@ BOOL TownMap_CheckFlag(GameData *gameData, u16 flag) {
         }
         return result;
     case TOWNMAP_FLAG_PLASMA_FRIGATE:
-        if (*EventWork_GetWkPtr(eventWork, EVENT_WORK_PLASMA_FRIGATE_LOCATION) == 3) {
+        if (*EventWork_GetWkPtr(eventWork, EVENT_WORK_PLASMA_FRIGATE_LOCATION) ==
+            PLASMA_FRIGATE_LOCATION_FRIGATE_ZONE) {
             return TRUE;
         }
         return FALSE;
