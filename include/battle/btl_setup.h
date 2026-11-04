@@ -10,6 +10,9 @@
 #include "struct_decls.h"
 #include "system/pms_data.h"
 
+// A party slot that holds no mon, as the slot of a mon that was not captured
+#define BTL_PARTY_SLOT_NONE 6
+
 // The background, place and time of a battle, which the battle view copies as one struct
 typedef struct {
     u32 bgType;
@@ -87,14 +90,14 @@ struct BtlSetup {
     GameData *gameData;
     Config *config;
     BagSave *bag;
-    BagCursor *unk7C;
+    BagCursor *bagCursor;
     PokeDexSave *pokedex;
     GameRecords *records;
-    CommPlayerSupport *unk88;
-    u16 unk8C;
-    u16 unk8E;
+    CommPlayerSupport *commPlayerSupport;
+    u16 gameTimeLimit;
+    u16 commandTimeLimit;
     // What Regulation_GetShooterSettings fills in from a regulation, a RegulationUnkAC
-    u8 unk90[7];
+    u8 shooterSettings[7];
     u8 unk97;
     // The player's badges
     u8 unk98;
@@ -108,7 +111,7 @@ struct BtlSetup {
     // How the battle ended, a BTL_RESULT_*
     u32 result;
     // The slot of the caught Pokémon in the second party, or 6 if none was caught
-    u8 capturedSlot;
+    u8 capturedSlot; // BTL_PARTY_SLOT_NONE until a mon is captured
     u8 commonVersion;
     u8 unkAE;
     u8 unkAF;

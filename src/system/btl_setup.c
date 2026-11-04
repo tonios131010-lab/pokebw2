@@ -98,9 +98,9 @@ u32 BtlSetup_CheckFlag(BtlSetup *setup, u32 flag) {
 void BtlSetup_ApplyRegulation(BtlSetup *setup, Regulation *regulation, HeapID heapId) {
     int i;
 
-    setup->unk8E = Regulation_GetParam(regulation, REGULATION_PARAM_16) * 60;
-    setup->unk8C = Regulation_GetParam(regulation, REGULATION_PARAM_15) * 60;
-    Regulation_GetShooterSettings(regulation, (RegulationUnkAC *)setup->unk90);
+    setup->commandTimeLimit = Regulation_GetParam(regulation, REGULATION_PARAM_16) * 60;
+    setup->gameTimeLimit = Regulation_GetParam(regulation, REGULATION_PARAM_15) * 60;
+    Regulation_GetShooterSettings(regulation, (RegulationUnkAC *)setup->shooterSettings);
     switch (Regulation_GetParam(regulation, REGULATION_PARAM_18)) {
     case 0:
         break;
@@ -226,13 +226,13 @@ static void BtlSetup_LoadGameData(BtlSetup *setup, GameData *gameData, BtlFieldS
     }
     setup->unk97 = 1;
     for (i = 0; i < 7; i++) {
-        setup->unk90[i] = 0;
+        setup->shooterSettings[i] = 0;
     }
     setup->playerInfo[0] = GetGameDataPlayerInfo(gameData);
     setup->bag = GameData_GetBag(gameData);
-    setup->unk7C = GameData_GetBagCursor(gameData);
+    setup->bagCursor = GameData_GetBagCursor(gameData);
     setup->pokedex = GameData_GetPokedex(gameData);
-    setup->unk88 = GameData_GetCommPlayerSupport(gameData);
+    setup->commPlayerSupport = GameData_GetCommPlayerSupport(gameData);
     setup->records = GameData_GetRecords(gameData);
     save = GameData_GetSaveControl(gameData);
     card = getTrainerCardData_wrapper(save);
