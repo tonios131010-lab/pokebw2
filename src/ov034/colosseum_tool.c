@@ -3,6 +3,7 @@
 // `.rodata`, which one file with union_eff.c's cannot give. Names are not swan's
 #include "field/colosseum_tool.h"
 #include "types.h"
+#include "constants/zones.h"
 #include "field/colosseum.h"
 #include "field/comm_player.h"
 #include "field/field.h"
@@ -135,7 +136,7 @@ BOOL UnionEff_IsOnSeatSpot(Field *field) {
     FieldPlayer_GetWPos(Field_GetPlayer(field), &pos);
     pos.x >>= 12;
     pos.z >>= 12;
-    if (Field_GetPlayerStateZoneID(field) == 0x96) {
+    if (Field_GetPlayerStateZoneID(field) == ZONE_UNION_ROOM_COLOSSEUM) {
         spots = spotsA;
         count = 5;
     } else {
