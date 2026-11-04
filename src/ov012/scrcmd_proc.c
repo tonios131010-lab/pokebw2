@@ -279,6 +279,13 @@ BOOL Scrcmd_Proc_Call3DDemo(VM *vm, FieldScriptEnv *env) {
     return TRUE;
 }
 
+typedef enum {
+    POKEDEX_DIPLOMA_REGIONAL_AWARD,
+    POKEDEX_DIPLOMA_NATIONAL_AWARD,
+    POKEDEX_DIPLOMA_SUBWAY_MAP,
+    POKEDEX_DIPLOMA_MARINE_TUBE_BOARD,
+} PokedexDiplomaKind;
+
 BOOL Scrcmd_Proc_CallPokedexDiploma(VM *vm, FieldScriptEnv *env) {
     GameSystem *gsys;
     GameData *gameData;
@@ -298,26 +305,26 @@ BOOL Scrcmd_Proc_CallPokedexDiploma(VM *vm, FieldScriptEnv *env) {
         GameBeacon_BroadcastPokedexComplete();
     }
     switch (mode) {
-    case 0:
+    case POKEDEX_DIPLOMA_REGIONAL_AWARD:
         award = GFL_HeapAllocate(HEAPID_GAMEEVENT, sizeof(PokedexAwardParam), TRUE, "scrcmd_proc.c", 546);
         award->gameData = gameData;
         award->skipIntro = value;
         CreateScrCmdOverlayProcess(vm, env, OVERLAY_REGIONAL_POKEDEX_AWARD, &REGIONAL_POKEDEX_AWARD_PROC_FUNCTIONS,
                                    award, NULL, NULL);
         break;
-    case 1:
+    case POKEDEX_DIPLOMA_NATIONAL_AWARD:
         award = GFL_HeapAllocate(HEAPID_GAMEEVENT, sizeof(PokedexAwardParam), TRUE, "scrcmd_proc.c", 554);
         award->gameData = gameData;
         award->skipIntro = value;
         CreateScrCmdOverlayProcess(vm, env, OVERLAY_NATIONAL_POKEDEX_AWARD, &NATIONAL_POKEDEX_AWARD_PROC_FUNCTIONS,
                                    award, NULL, NULL);
         break;
-    case 2:
+    case POKEDEX_DIPLOMA_SUBWAY_MAP:
         subwayMap = GFL_HeapAllocate(HEAPID_GAMEEVENT, sizeof(SubwayMapParam), TRUE, "scrcmd_proc.c", 563);
         subwayMap->playerInfo = playerInfo;
         CreateScrCmdOverlayProcess(vm, env, OVERLAY_SUBWAY_MAP, &SUBWAY_MAP_PROC_FUNCTIONS, subwayMap, NULL, NULL);
         break;
-    case 3:
+    case POKEDEX_DIPLOMA_MARINE_TUBE_BOARD:
         board = GFL_HeapAllocate(HEAPID_GAMEEVENT, sizeof(MarineTubeBoardParam), TRUE, "scrcmd_proc.c", 570);
         board->gsys = gsys;
         board->board = value;
