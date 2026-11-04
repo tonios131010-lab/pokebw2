@@ -11,7 +11,10 @@
 #include "pml/move.h"
 #include "struct_decls.h"
 
-// Up to four client IDs without repeats, the unused ones 4
+// The client ID that stands for no client
+#define BTL_CLIENT_ID_NONE 4
+
+// Up to four client IDs without repeats, the unused ones BTL_CLIENT_ID_NONE
 typedef struct {
     u32 count;
     u8 clientIds[4];

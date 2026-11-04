@@ -124,18 +124,28 @@ BOOL BtlCalc_RollCritical(u8 critStage) {
     return FALSE;
 }
 
+// The values of the type chart and of GetTypeEffectivenessMultiplier, which are the multiplier times four
+enum {
+    TYPE_CHART_IMMUNE = 0,
+    TYPE_CHART_QUARTER = 1,
+    TYPE_CHART_HALF = 2,
+    TYPE_CHART_NORMAL = 4,
+    TYPE_CHART_DOUBLE = 8,
+    TYPE_CHART_QUADRUPLE = 16,
+};
+
 u32 GetTypeEffectiveness(u8 attackType, u8 defenseType) {
     if (attackType == TYPE_NULL || defenseType == TYPE_NULL) {
         return TYPE_EFFECTIVENESS_NORMAL;
     }
     switch (TYPE_CHART[attackType][defenseType]) {
-    case 0:
+    case TYPE_CHART_IMMUNE:
         return TYPE_EFFECTIVENESS_IMMUNE;
-    case 2:
+    case TYPE_CHART_HALF:
         return TYPE_EFFECTIVENESS_HALF;
-    case 4:
+    case TYPE_CHART_NORMAL:
         return TYPE_EFFECTIVENESS_NORMAL;
-    case 8:
+    case TYPE_CHART_DOUBLE:
         return TYPE_EFFECTIVENESS_DOUBLE;
     }
     return TYPE_EFFECTIVENESS_IMMUNE;
@@ -158,17 +168,17 @@ u32 GetTypeEffectivenessMultiplier(u32 effectiveness1, u32 effectiveness2) {
     u32 multiplier = TYPE_EFFECTIVENESS_QUARTERS[effectiveness1] * TYPE_EFFECTIVENESS_QUARTERS[effectiveness2] / 4;
 
     switch (multiplier) {
-    case 0:
+    case TYPE_CHART_IMMUNE:
         return TYPE_EFFECTIVENESS_IMMUNE;
-    case 1:
+    case TYPE_CHART_QUARTER:
         return TYPE_EFFECTIVENESS_QUARTER;
-    case 2:
+    case TYPE_CHART_HALF:
         return TYPE_EFFECTIVENESS_HALF;
-    case 4:
+    case TYPE_CHART_NORMAL:
         return TYPE_EFFECTIVENESS_NORMAL;
-    case 8:
+    case TYPE_CHART_DOUBLE:
         return TYPE_EFFECTIVENESS_DOUBLE;
-    case 16:
+    case TYPE_CHART_QUADRUPLE:
         return TYPE_EFFECTIVENESS_QUADRUPLE;
     }
     return TYPE_EFFECTIVENESS_IMMUNE;
@@ -201,7 +211,7 @@ u8 GetTypeWeaknesses(u8 attackType, u8 *defenseTypes) {
     u8 i;
 
     for (i = 0, count = 0; i < 17; i++) {
-        if (TYPE_CHART[attackType][i] == 0 || TYPE_CHART[attackType][i] == 2) {
+        if (TYPE_CHART[attackType][i] == TYPE_CHART_IMMUNE || TYPE_CHART[attackType][i] == TYPE_CHART_HALF) {
             defenseTypes[count++] = i;
         }
     }
@@ -745,7 +755,7 @@ void BtlClientIDList_Init(BtlClientIDList *list) {
     u32 i;
 
     for (i = 0; i < 4; i++) {
-        list->clientIds[i] = 4;
+        list->clientIds[i] = BTL_CLIENT_ID_NONE;
     }
     list->count = 0;
 }
@@ -757,7 +767,7 @@ void BtlClientIDList_Add(BtlClientIDList *list, u8 clientId) {
         if (clientId == list->clientIds[i]) {
             return;
         }
-        if (list->clientIds[i] == 4) {
+        if (list->clientIds[i] == BTL_CLIENT_ID_NONE) {
             list->clientIds[i] = clientId;
             list->count++;
             return;
