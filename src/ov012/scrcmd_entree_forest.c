@@ -146,6 +146,13 @@ BOOL Scrcmd_EntreeForest_WordSetLoadEntreeForestPkmName(VM *vm, FieldScriptEnv *
     return FALSE;
 }
 
+typedef enum {
+    ENTREE_FOREST_INFO_IS_TOP_AREA = 1,
+    ENTREE_FOREST_INFO_IS_ENTRANCE_AREA = 2,
+    ENTREE_FOREST_INFO_SPECIES = 3,
+    ENTREE_FOREST_INFO_FORM = 4,
+} EntreeForestInfoKind;
+
 BOOL Scrcmd_EntreeForest_EntreeForestGetInfo(VM *vm, FieldScriptEnv *env) {
     u16 mode = ScriptReadAny(vm, env);
     u16 *result = ScriptReadVar(vm, env);
@@ -160,17 +167,17 @@ BOOL Scrcmd_EntreeForest_EntreeForestGetInfo(VM *vm, FieldScriptEnv *env) {
     case 0:
         *result = TRUE;
         break;
-    case 1:
+    case ENTREE_FOREST_INFO_IS_TOP_AREA:
         *result = SymbolMap_IsTopArea(GameData_GetEntreeForestArea(gameData));
         break;
-    case 2:
+    case ENTREE_FOREST_INFO_IS_ENTRANCE_AREA:
         *result = SymbolMap_IsEntranceArea(GameData_GetEntreeForestArea(gameData));
         break;
-    case 3:
+    case ENTREE_FOREST_INFO_SPECIES:
         GetTalkActorEntreeForestPkm(env, &speciesPokemon);
         *result = speciesPokemon.species;
         break;
-    case 4:
+    case ENTREE_FOREST_INFO_FORM:
         GetTalkActorEntreeForestPkm(env, &formPokemon);
         *result = formPokemon.form;
         break;
@@ -246,6 +253,18 @@ static GameEvent *EventEntreeForestBattleCall_Create(GameSystem *gsys, Field *fi
     return event;
 }
 
+typedef enum {
+    ENTREE_FOREST_BATTLE_STEP_PLAY_BGM,
+    ENTREE_FOREST_BATTLE_STEP_START_ENCOUNTER_EFFECT,
+    ENTREE_FOREST_BATTLE_STEP_WAIT_ENCOUNTER_EFFECT,
+    ENTREE_FOREST_BATTLE_STEP_CLOSE_FIELD,
+    ENTREE_FOREST_BATTLE_STEP_START_CAPTURE,
+    ENTREE_FOREST_BATTLE_STEP_START_RETURN,
+    ENTREE_FOREST_BATTLE_STEP_FADE_POP_BGM,
+    ENTREE_FOREST_BATTLE_STEP_OPEN_FIELD,
+    ENTREE_FOREST_BATTLE_STEP_WAIT_BGM,
+} EntreeForestBattleStep;
+
 static GameEventReturnCode EventEntreeForestBattleCall_Callback(GameEvent *event, u32 *state, void *work) {
     EntreeForestBattleData *data = work;
     EntreeForestPokemon check1;
@@ -263,11 +282,11 @@ static GameEventReturnCode EventEntreeForestBattleCall_Callback(GameEvent *event
     PartyPkm *pkm5;
 
     switch (*state) {
-    case 0:
+    case ENTREE_FOREST_BATTLE_STEP_PLAY_BGM:
         GameEvent_ChainNext(event, EventBattleBGMPlay_Create(gsys, SEQ_BGM_VS_NORAPOKE));
         (*state)++;
         break;
-    case 1:
+    case ENTREE_FOREST_BATTLE_STEP_START_ENCOUNTER_EFFECT:
         pkm1 = data->pkm;
         heapId1 = data->heapId;
         check1.species = PokeParty_GetParam(pkm1, PKM_PARAM_SPECIES, NULL);
@@ -278,14 +297,14 @@ static GameEventReturnCode EventEntreeForestBattleCall_Callback(GameEvent *event
         EncEff_StartEvent(Field_GetEncEff(data->field), event, 0);
         (*state)++;
         break;
-    case 2:
+    case ENTREE_FOREST_BATTLE_STEP_WAIT_ENCOUNTER_EFFECT:
         (*state)++;
         break;
-    case 3:
+    case ENTREE_FOREST_BATTLE_STEP_CLOSE_FIELD:
         GameEvent_ChainNext(event, CreateFieldCloseEvent(gsys, data->field));
         (*state)++;
         break;
-    case 4:
+    case ENTREE_FOREST_BATTLE_STEP_START_CAPTURE:
         save = GameData_GetSaveControl(gameData);
         BagSave_AddItemAsFirst(GameData_GetBag(gameData), ITEM_DREAM_BALL, 1, data->heapId);
         GFL_OvlLoad(OVERLAY_ID(172));
@@ -297,7 +316,7 @@ static GameEventReturnCode EventEntreeForestBattleCall_Callback(GameEvent *event
         GSYS_QueueProcAsEvent(event, -1, &PDC_PROC_FUNCTIONS, data->pdcWork);
         (*state)++;
         break;
-    case 5:
+    case ENTREE_FOREST_BATTLE_STEP_START_RETURN:
         caught = PdcWork_IsCaught(data->pdcWork);
         pkm5 = data->pkm;
         heapId5 = data->heapId;
@@ -320,17 +339,17 @@ static GameEventReturnCode EventEntreeForestBattleCall_Callback(GameEvent *event
         BagSave_SubItem(GameData_GetBag(gameData), ITEM_DREAM_BALL, 1, data->heapId);
         (*state)++;
         break;
-    case 6:
+    case ENTREE_FOREST_BATTLE_STEP_FADE_POP_BGM:
         EventPdcReturn_FreeParam(data->returnWork);
         GFL_OvlUnload(OVERLAY_ID(330));
         GameEvent_ChainNext(event, EventBGMFadePop_Create(gsys));
         (*state)++;
         break;
-    case 7:
+    case ENTREE_FOREST_BATTLE_STEP_OPEN_FIELD:
         GameEvent_ChainNext(event, EventFieldOpen_CreateHeadless(gsys));
         (*state)++;
         break;
-    case 8:
+    case ENTREE_FOREST_BATTLE_STEP_WAIT_BGM:
         GameEvent_ChainNext(event, EventBGMFadeWait_Create(gsys));
         (*state)++;
         break;
@@ -389,6 +408,15 @@ static GameEvent *EventEntreeForestWarp_CreateToAnother(GameSystem *gsys, u32 di
     return EventEntreeForestWarp_Create(gsys, dir != ENTREE_FOREST_DIR_EXIT, &pos, dir, area);
 }
 
+typedef enum {
+    ENTREE_FOREST_WARP_STEP_STOP_ACTORS,
+    ENTREE_FOREST_WARP_STEP_FADE_OUT,
+    ENTREE_FOREST_WARP_STEP_CHANGE_MAP,
+    ENTREE_FOREST_WARP_STEP_FADE_IN,
+    ENTREE_FOREST_WARP_STEP_SET_RESULT,
+    ENTREE_FOREST_WARP_STEP_RESUME_ACTORS,
+} EntreeForestWarpStep;
+
 static GameEventReturnCode EventEntreeForestWarp_Callback(GameEvent *event, u32 *state, void *work) {
     EntreeForestWarpData *data = work;
     GameSystem *gsys = GameEvent_GetGameSystem(event);
@@ -396,11 +424,11 @@ static GameEventReturnCode EventEntreeForestWarp_Callback(GameEvent *event, u32 
     Field *field = GSYS_GetField(gsys);
 
     switch (*state) {
-    case 0:
+    case ENTREE_FOREST_WARP_STEP_STOP_ACTORS:
         DisableAllActorsMovement(Field_GetActorSystem(field));
         (*state)++;
         break;
-    case 1:
+    case ENTREE_FOREST_WARP_STEP_FADE_OUT:
         if (data->playSound) {
             GFL_SndSEPlay(SEQ_SE_KAIDAN);
         }
@@ -408,26 +436,26 @@ static GameEventReturnCode EventEntreeForestWarp_Callback(GameEvent *event, u32 
                             CallFieldMapEntranceOutTransitionDefault(gsys, field, FIELD_TRANSITION_WIPE_FACING, 0));
         (*state)++;
         break;
-    case 2:
+    case ENTREE_FOREST_WARP_STEP_CHANGE_MAP:
         data->zoneId = SymbolMap_GetZone(gsys, data->area);
         GameData_SetEntreeForestArea(gameData, data->area);
         GameEvent_ChainNext(event, EventMapChange_CreateGridDefault(gsys, field, data->zoneId, &data->pos, data->dir));
         (*state)++;
         break;
-    case 3:
+    case ENTREE_FOREST_WARP_STEP_FADE_IN:
         if (FldActSys_IsAsyncLoadPending(Field_GetActorSystem(GSYS_GetField(gsys))) != TRUE) {
             GameEvent_ChainNext(
                 event, CallFieldMapEntranceInTransition(gsys, field, FIELD_TRANSITION_WIPE_FACING, 0, 0, 0, 0));
             (*state)++;
         }
         break;
-    case 4:
+    case ENTREE_FOREST_WARP_STEP_SET_RESULT:
         if (data->result != NULL) {
             *data->result = TRUE;
         }
-        *state = 5;
+        *state = ENTREE_FOREST_WARP_STEP_RESUME_ACTORS;
         break;
-    case 5:
+    case ENTREE_FOREST_WARP_STEP_RESUME_ACTORS:
         EnableAllActorsMovement(Field_GetActorSystem(field));
         return GAMEEVENT_DONE;
     }
