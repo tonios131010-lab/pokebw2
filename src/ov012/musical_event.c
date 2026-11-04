@@ -736,30 +736,44 @@ static void MusicalEvent_DrawAudienceGifts(MusicalEventWork *work) {
     GFL_HeapFree(props);
 }
 
+typedef enum {
+    MUSICAL_EVENT_END_STEP_POP_BGM = 0,
+    MUSICAL_EVENT_END_STEP_OPEN_FIELD = 1,
+    MUSICAL_EVENT_END_STEP_WAIT_BGM = 3,
+    MUSICAL_EVENT_END_STEP_DONE = 4,
+} MusicalEventEndStep;
+
 // Goes back to the field
 static BOOL MusicalEvent_ReturnToField(GameEvent *event, MusicalEventWork *work) {
     GameData_GetFieldSoundSystem(GSYS_GetGameData(work->gsys));
     switch (work->subState) {
-    case 0:
+    case MUSICAL_EVENT_END_STEP_POP_BGM:
         GameEvent_ChainNext(event, EventBGMPop_CreateEx(work->gsys, 0, 60));
         work->subState++;
         break;
-    case 1:
+    case MUSICAL_EVENT_END_STEP_OPEN_FIELD:
         GameEvent_ChainNext(event, EventFieldOpen_CreateHeadless(work->gsys));
         work->subState++;
         break;
     case 2:
         work->subState++;
         break;
-    case 3:
+    case MUSICAL_EVENT_END_STEP_WAIT_BGM:
         GameEvent_ChainNext(event, EventBGMFadeWait_Create(work->gsys));
         work->subState++;
         break;
-    case 4:
+    case MUSICAL_EVENT_END_STEP_DONE:
         return TRUE;
     }
     return FALSE;
 }
+
+typedef enum {
+    MUSICAL_EVENT_START_STEP_PUSH_BGM = 1,
+    MUSICAL_EVENT_START_STEP_CLOSE_FIELD = 2,
+    MUSICAL_EVENT_START_STEP_WAIT_FIELD_SOUND = 3,
+    MUSICAL_EVENT_START_STEP_DONE = 4,
+} MusicalEventStartStep;
 
 // Leaves the field
 static BOOL MusicalEvent_LeaveField(GameEvent *event, MusicalEventWork *work) {
