@@ -51,15 +51,20 @@ void PleasureBoat_Free(PleasureBoat **boat) {
     }
 }
 
+typedef enum {
+    ROYAL_UNOVA_STEP_START_DEMO,
+    ROYAL_UNOVA_STEP_WAIT_DEMO,
+} RoyalUnovaStep;
+
 static GameEventReturnCode EventRoyalUnova_Callback(GameEvent *event, u32 *state, void *data) {
     EventRoyalUnovaWork *work = GameEvent_GetData(event);
 
     switch (*state) {
-    case 0:
+    case ROYAL_UNOVA_STEP_START_DEMO:
         GSYS_QueueProcAsEvent(event, OVERLAY_DEMO3D, &gDemo3DProcFunctions, work);
         (*state)++;
         break;
-    case 1:
+    case ROYAL_UNOVA_STEP_WAIT_DEMO:
         if (work->param.result == DEMO3D_RESULT_ENDED) {
             *work->result = TRUE;
         } else {
@@ -85,6 +90,14 @@ static void PleasureBoat_SetClock(PleasureBoat *boat, u32 clock) {
     }
 }
 
+typedef enum {
+    PLEASURE_BOAT_INFO_ROOM_OBJ_CODE = 4,
+    PLEASURE_BOAT_INFO_PASSENGER_PARAM = 5,
+    PLEASURE_BOAT_INFO_PASSENGER_TYPE = 6,
+    PLEASURE_BOAT_INFO_PASSENGER_EXTRA = 7,
+    PLEASURE_BOAT_INFO_PASSENGER_OCCUPIED = 8,
+} PleasureBoatRoomInfoKind;
+
 BOOL Scrcmd_RoyalUnova_PleasureBoatGetRoomInfo(VM *vm, FieldScriptEnv *env) {
     PleasureBoat **boat;
     u16 room;
@@ -99,19 +112,19 @@ BOOL Scrcmd_RoyalUnova_PleasureBoatGetRoomInfo(VM *vm, FieldScriptEnv *env) {
     index = ScriptReadAny(vm, env);
     result = ScriptReadVar(vm, env);
     switch (kind) {
-    case 4:
+    case PLEASURE_BOAT_INFO_ROOM_OBJ_CODE:
         *result = PleasureBoat_GetRoomObjCode(*boat, room);
         break;
-    case 5:
+    case PLEASURE_BOAT_INFO_PASSENGER_PARAM:
         *result = PleasureBoat_GetPassengerParam(*boat, room);
         break;
-    case 6:
+    case PLEASURE_BOAT_INFO_PASSENGER_TYPE:
         *result = PleasureBoat_GetPassengerType(*boat, room);
         break;
-    case 7:
+    case PLEASURE_BOAT_INFO_PASSENGER_EXTRA:
         *result = PleasureBoat_GetPassengerExtra(*boat, room, index);
         break;
-    case 8:
+    case PLEASURE_BOAT_INFO_PASSENGER_OCCUPIED:
         if (PleasureBoat_GetPassengerOccupied(*boat, room)) {
             *result = TRUE;
         } else {
