@@ -209,9 +209,19 @@ u16 ZoneWarp_CalcPosWeightBitsRail(ZoneWarp *warp, const RailPosition *position)
     return ZoneWarp_CalcPosWeightBitsRail_(warp, position);
 }
 
+// The direction a warp faces, in ZoneWarp::direction
+typedef enum {
+    ZONE_WARP_DIR_UP = 1,
+    ZONE_WARP_DIR_DOWN,
+    ZONE_WARP_DIR_LEFT,
+    ZONE_WARP_DIR_RIGHT,
+} ZoneWarpDir;
+
 BOOL CheckWarpDirectionMatch(const ZoneWarp *warp, u16 direction) {
-    if ((direction == DIR_UP && warp->direction == 2) || (direction == DIR_DOWN && warp->direction == 1) ||
-        (direction == DIR_LEFT && warp->direction == 4) || (direction == DIR_RIGHT && warp->direction == 3)) {
+    if ((direction == DIR_UP && warp->direction == ZONE_WARP_DIR_DOWN) ||
+        (direction == DIR_DOWN && warp->direction == ZONE_WARP_DIR_UP) ||
+        (direction == DIR_LEFT && warp->direction == ZONE_WARP_DIR_RIGHT) ||
+        (direction == DIR_RIGHT && warp->direction == ZONE_WARP_DIR_LEFT)) {
         return TRUE;
     }
     return FALSE;
@@ -222,7 +232,7 @@ u32 GetWarpTransitionType(ZoneWarp *warp) {
 }
 
 BOOL IsWarpZoneOrWarpID0xFFFF(const ZoneWarp *warp) {
-    return warp->destZoneId == 0xffff || warp->destId == 0xffff;
+    return warp->destZoneId == 0xffff || warp->destId == WARP_ID_NONE;
 }
 
 void SetZoneWarpLocation(EventData *data, u16 warpId, u16 x, u16 y, u16 z) {
@@ -443,6 +453,16 @@ ZoneBGEntity *GetZoneProxiesAndCount(EventData *data, u32 *restrict count) {
     return data->entities;
 }
 
+typedef enum {
+    BG_ENTITY_FACING_UP,
+    BG_ENTITY_FACING_RIGHT,
+    BG_ENTITY_FACING_LEFT,
+    BG_ENTITY_FACING_DOWN,
+    BG_ENTITY_FACING_ANY,
+    BG_ENTITY_FACING_HORIZONTAL,
+    BG_ENTITY_FACING_VERTICAL,
+} BGEntityFacing;
+
 u16 CheckProxyEntityEvent(EventData *data, EventWork *eventWork, const void *position, u16 direction) {
     ZoneBGEntity *entity;
     u32 count;
@@ -471,34 +491,34 @@ u16 CheckProxyEntityEvent(EventData *data, EventWork *eventWork, const void *pos
                 return entity->scrId;
             }
             switch (entity->direction) {
-            case 0:
+            case BG_ENTITY_FACING_UP:
                 if (direction == DIR_UP) {
                     return entity->scrId;
                 }
                 break;
-            case 1:
+            case BG_ENTITY_FACING_RIGHT:
                 if (direction == DIR_RIGHT) {
                     return entity->scrId;
                 }
                 break;
-            case 2:
+            case BG_ENTITY_FACING_LEFT:
                 if (direction == DIR_LEFT) {
                     return entity->scrId;
                 }
                 break;
-            case 3:
+            case BG_ENTITY_FACING_DOWN:
                 if (direction == DIR_DOWN) {
                     return entity->scrId;
                 }
                 break;
-            case 4:
+            case BG_ENTITY_FACING_ANY:
                 return entity->scrId;
-            case 5:
+            case BG_ENTITY_FACING_HORIZONTAL:
                 if (direction == DIR_LEFT || direction == DIR_RIGHT) {
                     return entity->scrId;
                 }
                 break;
-            case 6:
+            case BG_ENTITY_FACING_VERTICAL:
                 if (direction <= DIR_DOWN) {
                     return entity->scrId;
                 }
@@ -548,6 +568,13 @@ void SetBGEntityLocation(EventData *data, u32 index, u16 x, u16 z, u16 y) {
     }
 }
 
+typedef enum {
+    ZONE_WARP_RAIL_FLIP_FRONT,
+    ZONE_WARP_RAIL_FLIP_SIDE,
+    ZONE_WARP_RAIL_FLIP_BOTH,
+    ZONE_WARP_RAIL_FLIP_NONE,
+} ZoneWarpRailFlip;
+
 u16 CalcWarpTransferAddend(u32 posWeightBits, u32 warpDirection, BOOL isRail, u32 railParam, u16 span) {
     u32 width;
     s32 index;
@@ -568,17 +595,17 @@ u16 CalcWarpTransferAddend(u32 posWeightBits, u32 warpDirection, BOOL isRail, u3
     }
     if (isRail) {
         switch (railParam) {
-        case 0:
+        case ZONE_WARP_RAIL_FLIP_FRONT:
             if (direction == DIR_LEFT || direction == DIR_RIGHT) {
                 index = width - 1 - index;
             }
             break;
-        case 1:
+        case ZONE_WARP_RAIL_FLIP_SIDE:
             if (direction == DIR_UP || direction == DIR_DOWN) {
                 index = width - 1 - index;
             }
             break;
-        case 2:
+        case ZONE_WARP_RAIL_FLIP_BOTH:
             index = width - 1 - index;
             break;
         }
@@ -638,17 +665,17 @@ u16 ZoneWarp_CalcPosWeightBitsRail_(ZoneWarp *warp, const RailPosition *position
     sideFlip = FALSE;
     direction = ZoneWarp_GetDirection(warp);
     switch (rail->param) {
-    case 0:
+    case ZONE_WARP_RAIL_FLIP_FRONT:
         frontFlip = TRUE;
         break;
-    case 1:
+    case ZONE_WARP_RAIL_FLIP_SIDE:
         sideFlip = TRUE;
         break;
-    case 2:
+    case ZONE_WARP_RAIL_FLIP_BOTH:
         frontFlip = TRUE;
         sideFlip = TRUE;
         break;
-    case 3:
+    case ZONE_WARP_RAIL_FLIP_NONE:
         break;
     }
     if (rail->sideSpan > 1) {
@@ -670,13 +697,13 @@ u16 ZoneWarp_CalcPosWeightBitsRail_(ZoneWarp *warp, const RailPosition *position
 
 u32 ZoneWarp_GetDirection(const ZoneWarp *warp) {
     switch (warp->direction) {
-    case 1:
+    case ZONE_WARP_DIR_UP:
         return DIR_UP;
-    case 2:
+    case ZONE_WARP_DIR_DOWN:
         return DIR_DOWN;
-    case 3:
+    case ZONE_WARP_DIR_LEFT:
         return DIR_LEFT;
-    case 4:
+    case ZONE_WARP_DIR_RIGHT:
         return DIR_RIGHT;
     default:
         return DIR_DOWN;
