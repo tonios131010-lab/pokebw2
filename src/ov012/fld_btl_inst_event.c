@@ -82,30 +82,39 @@ GameEvent *EventBtlInstPokeSelect_Create(GameSystem *gsys, u32 a1, u32 mode, u32
     return event;
 }
 
+typedef enum {
+    BTL_INST_POKE_SELECT_STEP_FADE_OUT,
+    BTL_INST_POKE_SELECT_STEP_CLOSE_FIELD,
+    BTL_INST_POKE_SELECT_STEP_POKE_LIST,
+    BTL_INST_POKE_SELECT_STEP_OPEN_FIELD,
+    BTL_INST_POKE_SELECT_STEP_FADE_IN,
+    BTL_INST_POKE_SELECT_STEP_DONE,
+} BtlInstPokeSelectStep;
+
 static GameEventReturnCode EventBtlInstPokeSelect_Callback(GameEvent *event, u32 *state, void *data) {
     BtlInstPokeSelectWork *work = data;
     GameSystem *gsys = work->gsys;
     int i, count;
 
     switch (*state) {
-    case 0:
+    case BTL_INST_POKE_SELECT_STEP_FADE_OUT:
         GameEvent_ChainNext(
             event, CallFieldMapEntranceOutTransitionDefault(gsys, work->field, FIELD_TRANSITION_FADE_BLACK, 0));
         (*state)++;
         break;
-    case 1:
+    case BTL_INST_POKE_SELECT_STEP_CLOSE_FIELD:
         GameEvent_ChainNext(event, CreateFieldCloseEvent(gsys, work->field));
         (*state)++;
         break;
-    case 2:
+    case BTL_INST_POKE_SELECT_STEP_POKE_LIST:
         GameEvent_ChainNext(event, EventPokeList_Create(gsys, work->field, &work->partyParam, &work->summaryParam));
         (*state)++;
         break;
-    case 3:
+    case BTL_INST_POKE_SELECT_STEP_OPEN_FIELD:
         GameEvent_ChainNext(event, EventFieldOpen_CreateHeadless(gsys));
         (*state)++;
         break;
-    case 4:
+    case BTL_INST_POKE_SELECT_STEP_FADE_IN:
         GameEvent_ChainNext(
             event, CallFieldMapEntranceInTransition(gsys, work->field, FIELD_TRANSITION_FADE_BLACK, 0, 1, 0, 0));
         MI_CpuCopy8(work->partyParam.picked, work->picked, sizeof(work->partyParam.picked));
@@ -124,7 +133,7 @@ static GameEventReturnCode EventBtlInstPokeSelect_Callback(GameEvent *event, u32
         }
         (*state)++;
         break;
-    case 5:
+    case BTL_INST_POKE_SELECT_STEP_DONE:
         return GAMEEVENT_DONE;
     }
     return GAMEEVENT_CONTINUE;
@@ -155,22 +164,28 @@ GameEvent *EventBtlInstTrainerMsg_Create(GameSystem *gsys, BSubwayTrainer *train
     return event;
 }
 
+typedef enum {
+    BTL_INST_TRAINER_MSG_STEP_PRINT,
+    BTL_INST_TRAINER_MSG_STEP_WAIT_KEY,
+    BTL_INST_TRAINER_MSG_STEP_WAIT_CLOSE,
+} BtlInstTrainerMsgStep;
+
 static GameEventReturnCode EventBtlInstTrainerMsg_Callback(GameEvent *event, u32 *state, void *data) {
     BtlInstTrainerMsgWork *work = data;
 
     switch (*state) {
-    case 0:
+    case BTL_INST_TRAINER_MSG_STEP_PRINT:
         if (MsgBGPrinter_TalkWinMain(work->msgWin) == TRUE) {
             (*state)++;
         }
         break;
-    case 1:
+    case BTL_INST_TRAINER_MSG_STEP_WAIT_KEY:
         if (GCTX_HIDGetPressedKeys() & (PAD_BUTTON_A | PAD_BUTTON_B)) {
             MsgBGPrinter_DeleteTalkWin(work->msgWin);
             (*state)++;
         }
         break;
-    case 2:
+    case BTL_INST_TRAINER_MSG_STEP_WAIT_CLOSE:
         if (MsgBGPrinter_WaitTalkWinClose(work->msgWin) == TRUE) {
             GFL_StrBufFree(work->strbuf);
             return GAMEEVENT_DONE;
