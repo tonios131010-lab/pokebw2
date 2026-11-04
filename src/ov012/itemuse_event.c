@@ -171,6 +171,12 @@ static FieldActionResult FieldActionBlockCheck_NormalZoneNotRoyalUnova(GameData 
     return FIELD_ACTION_BLOCKED;
 }
 
+typedef enum {
+    TOGGLE_CYCLING_STEP_TOGGLE,
+    TOGGLE_CYCLING_STEP_WAIT_FORM_CHANGE,
+    TOGGLE_CYCLING_STEP_WAIT_MODEL,
+} ToggleCyclingStep;
+
 static GameEventReturnCode EventFieldToggleCycling_Callback(GameEvent *event, u32 *state, void *data) {
     EventFieldToggleCyclingWork *work = data;
     Field *field = GSYS_GetField(work->gsys);
@@ -178,7 +184,7 @@ static GameEventReturnCode EventFieldToggleCycling_Callback(GameEvent *event, u3
 
     Field_GetActorSystem(field);
     switch (*state) {
-    case 0:
+    case TOGGLE_CYCLING_STEP_TOGGLE:
         commSys = GSYS_GetGameCommSystem(work->gsys);
         work->timer++;
         if (Intrude_IsSessionEndPending(commSys) == TRUE && work->timer < 30) {
@@ -186,12 +192,12 @@ static GameEventReturnCode EventFieldToggleCycling_Callback(GameEvent *event, u3
         }
         Field_ToggleCycling(field);
         (*state)++;
-    case 1:
+    case TOGGLE_CYCLING_STEP_WAIT_FORM_CHANGE:
         if (FieldPlayer_StepFormChange(Field_GetPlayer(field)) == TRUE) {
             (*state)++;
         }
         break;
-    case 2:
+    case TOGGLE_CYCLING_STEP_WAIT_MODEL:
         if (FieldPlayer_WaitModelReady(Field_GetPlayer(field)) == TRUE) {
             return GAMEEVENT_DONE;
         }
