@@ -164,10 +164,10 @@ static BOOL KeySystem_ProcMain(GameProc *proc, u32 *state, void *param, void *wo
 
     if (wk->net != NULL) {
         switch (KeySystemNet_CheckError(wk->net)) {
-        case 0:
+        case KEY_SYSTEM_NET_ERROR_NONE:
             break;
         case 1:
-        case 2:
+        case KEY_SYSTEM_NET_ERROR:
         default:
             KeySystemNet_Reset(wk->net);
             GFL_SndStop();
@@ -232,18 +232,24 @@ static BOOL KeySystem_ProcMain(GameProc *proc, u32 *state, void *param, void *wo
     return FALSE;
 }
 
+enum {
+    FADE_SEQ_START_FADE,
+    FADE_SEQ_WAIT_FADE,
+    FADE_SEQ_END,
+};
+
 void KeySystem_SeqFadeIn(KeySystemSeq *seq, int *state, void *work) {
     switch (*state) {
-    case 0:
+    case FADE_SEQ_START_FADE:
         GFL_FadeSet(FADE_ENGINE_A_BLACK | FADE_ENGINE_B_BLACK, 16, 0, 0);
         (*state)++;
         break;
-    case 1:
+    case FADE_SEQ_WAIT_FADE:
         if (!GFL_FadeIsRunning()) {
             (*state)++;
         }
         break;
-    case 2:
+    case FADE_SEQ_END:
         KeySystemSeq_Pop(seq);
         break;
     }
@@ -251,16 +257,16 @@ void KeySystem_SeqFadeIn(KeySystemSeq *seq, int *state, void *work) {
 
 void KeySystem_SeqFadeOut(KeySystemSeq *seq, int *state, void *work) {
     switch (*state) {
-    case 0:
+    case FADE_SEQ_START_FADE:
         GFL_FadeSet(FADE_ENGINE_A_BLACK | FADE_ENGINE_B_BLACK, 0, 16, 0);
         (*state)++;
         break;
-    case 1:
+    case FADE_SEQ_WAIT_FADE:
         if (!GFL_FadeIsRunning()) {
             (*state)++;
         }
         break;
-    case 2:
+    case FADE_SEQ_END:
         KeySystemSeq_Pop(seq);
         break;
     }
@@ -268,16 +274,16 @@ void KeySystem_SeqFadeOut(KeySystemSeq *seq, int *state, void *work) {
 
 void KeySystem_SeqFadeInUnused(KeySystemSeq *seq, int *state, void *work) {
     switch (*state) {
-    case 0:
+    case FADE_SEQ_START_FADE:
         GFL_FadeSet(FADE_ENGINE_A_BLACK | FADE_ENGINE_B_BLACK, 16, 0, 0);
         (*state)++;
         break;
-    case 1:
+    case FADE_SEQ_WAIT_FADE:
         if (!GFL_FadeIsRunning()) {
             (*state)++;
         }
         break;
-    case 2:
+    case FADE_SEQ_END:
         KeySystemSeq_Pop(seq);
         break;
     }
@@ -285,39 +291,51 @@ void KeySystem_SeqFadeInUnused(KeySystemSeq *seq, int *state, void *work) {
 
 void KeySystem_SeqFadeOutWhite(KeySystemSeq *seq, int *state, void *work) {
     switch (*state) {
-    case 0:
+    case FADE_SEQ_START_FADE:
         GFL_FadeSet(FADE_ENGINE_A_WHITE | FADE_ENGINE_B_WHITE, 0, 16, 0);
         (*state)++;
         break;
-    case 1:
+    case FADE_SEQ_WAIT_FADE:
         if (!GFL_FadeIsRunning()) {
             (*state)++;
         }
         break;
-    case 2:
+    case FADE_SEQ_END:
         KeySystemSeq_Pop(seq);
         break;
     }
 }
+
+enum {
+    END_SCENE_SEQ_REQUEST_END,
+    END_SCENE_SEQ_WAIT_END,
+    END_SCENE_SEQ_END,
+};
 
 void KeySystem_SeqEndScene(KeySystemSeq *seq, int *state, void *work) {
     KeySystemWork *wk = work;
 
     switch (*state) {
-    case 0:
+    case END_SCENE_SEQ_REQUEST_END:
         KeySystemScene_RequestEnd(wk->scene);
         (*state)++;
         break;
-    case 1:
+    case END_SCENE_SEQ_WAIT_END:
         if (KeySystemScene_IsIdle(wk->scene)) {
             (*state)++;
         }
         break;
-    case 2:
+    case END_SCENE_SEQ_END:
         KeySystemSeq_Pop(seq);
         break;
     }
 }
+
+enum {
+    WIRELESS_OFF_SEQ_PRINT,
+    WIRELESS_OFF_SEQ_WAIT_PRINT,
+    WIRELESS_OFF_SEQ_END,
+};
 
 void KeySystem_SeqWirelessOff(KeySystemSeq *seq, int *state, void *work) {
     KeySystemWork *wk = work;
@@ -325,7 +343,7 @@ void KeySystem_SeqWirelessOff(KeySystemSeq *seq, int *state, void *work) {
     StrBuf *str;
 
     switch (*state) {
-    case 0:
+    case WIRELESS_OFF_SEQ_PRINT:
         KeySystem_CreateMsgWin(wk, HEAPID_KEY_SYSTEM);
         msgData = GFL_MsgSysLoadData(FALSE, ARCID_SCRIPT_MESSAGE, SCRIPT_TEXT_GLOBAL_10520, HEAPID_KEY_SYSTEM);
         str = GFL_MsgDataLoadStrbufNew(msgData, Global10520_Text_WirelessCommunicationsTurnedOff);
@@ -333,16 +351,16 @@ void KeySystem_SeqWirelessOff(KeySystemSeq *seq, int *state, void *work) {
         GFL_StrBufFree(str);
         GFL_MsgDataFree(msgData);
         GFL_BGSysQueueScrLoad(0);
-        *state = 1;
+        *state = WIRELESS_OFF_SEQ_WAIT_PRINT;
         break;
-    case 1:
+    case WIRELESS_OFF_SEQ_WAIT_PRINT:
         if (KeySystemMsgWin_IsDone(wk->msgWin)) {
             KeySystem_FreeMsgWin(wk);
             GFL_BGSysQueueScrLoad(0);
-            *state = 2;
+            *state = WIRELESS_OFF_SEQ_END;
         }
         break;
-    case 2:
+    case WIRELESS_OFF_SEQ_END:
         KeySystemSeq_Pop(seq);
         break;
     }
@@ -884,78 +902,105 @@ void KeySystem_FreeMenu(KeySystemWork *wk) {
     wk->menu = NULL;
 }
 
+enum {
+    TOP_SEQ_START_SCENE,
+    TOP_SEQ_FADE_IN,
+    TOP_SEQ_TOP_MENU,
+    TOP_SEQ_FADE_OUT,
+    TOP_SEQ_END_SCENE,
+    TOP_SEQ_RESET,
+};
+
 void KeySystem_SeqTop(KeySystemSeq *seq, int *state, void *work) {
     switch (*state) {
-    case 0:
+    case TOP_SEQ_START_SCENE:
         KeySystemSeq_Push(seq, KeySystem_SeqStartTopScene);
         (*state)++;
         break;
-    case 1:
+    case TOP_SEQ_FADE_IN:
         KeySystemSeq_Push(seq, KeySystem_SeqFadeIn);
         (*state)++;
         break;
-    case 2:
+    case TOP_SEQ_TOP_MENU:
         KeySystemSeq_Push(seq, KeySystem_SeqTopMenu);
         (*state)++;
         break;
-    case 3:
+    case TOP_SEQ_FADE_OUT:
         KeySystemSeq_Push(seq, KeySystem_SeqFadeOutWhite);
         (*state)++;
         break;
-    case 4:
+    case TOP_SEQ_END_SCENE:
         KeySystemSeq_Push(seq, KeySystem_SeqEndScene);
         (*state)++;
         break;
-    case 5:
+    case TOP_SEQ_RESET:
         KeySystemSeq_Reset(seq);
         break;
     }
 }
+
+enum {
+    SAVE_CORRUPTED_SEQ_START_SCENE,
+    SAVE_CORRUPTED_SEQ_FADE_IN,
+    SAVE_CORRUPTED_SEQ_PRINT,
+    SAVE_CORRUPTED_SEQ_WAIT_PRINT,
+    SAVE_CORRUPTED_SEQ_FADE_OUT,
+    SAVE_CORRUPTED_SEQ_END_SCENE,
+    SAVE_CORRUPTED_SEQ_RESET,
+};
 
 static void KeySystem_SeqSaveCorrupted(KeySystemSeq *seq, int *state, void *work) {
     KeySystemWork *wk = work;
 
     switch (*state) {
-    case 0:
+    case SAVE_CORRUPTED_SEQ_START_SCENE:
         KeySystemSeq_Push(seq, KeySystem_SeqStartMsgScene);
         (*state)++;
         break;
-    case 1:
+    case SAVE_CORRUPTED_SEQ_FADE_IN:
         KeySystemSeq_Push(seq, KeySystem_SeqFadeIn);
         (*state)++;
         break;
-    case 2:
+    case SAVE_CORRUPTED_SEQ_PRINT:
         KeySystemMsgWin_PrintMsg(wk->msgWin, wk->msgData, 161, KEY_SYSTEM_MSG_STREAM);
         (*state)++;
         break;
-    case 3:
+    case SAVE_CORRUPTED_SEQ_WAIT_PRINT:
         if (KeySystemMsgWin_IsDone(wk->msgWin)) {
             (*state)++;
         }
         break;
-    case 4:
+    case SAVE_CORRUPTED_SEQ_FADE_OUT:
         KeySystemSeq_Push(seq, KeySystem_SeqFadeOutWhite);
         (*state)++;
         break;
-    case 5:
+    case SAVE_CORRUPTED_SEQ_END_SCENE:
         KeySystemSeq_Push(seq, KeySystem_SeqEndScene);
         (*state)++;
         break;
-    case 6:
+    case SAVE_CORRUPTED_SEQ_RESET:
         KeySystemSeq_Reset(seq);
         break;
     }
 }
 
+enum {
+    TOP_MENU_SEQ_START_SCENE,
+    TOP_MENU_SEQ_WAIT_CHOICE,
+    TOP_MENU_SEQ_END_SCENE,
+    TOP_MENU_SEQ_RUN_CHOICE,
+    TOP_MENU_SEQ_END,
+};
+
 static void KeySystem_SeqTopMenu(KeySystemSeq *seq, int *state, void *work) {
     KeySystemWork *wk = work;
 
     switch (*state) {
-    case 0:
+    case TOP_MENU_SEQ_START_SCENE:
         KeySystemSeq_Push(seq, KeySystem_SeqStartTopScene);
         (*state)++;
         break;
-    case 1:
+    case TOP_MENU_SEQ_WAIT_CHOICE:
         KeySystemList_Update(wk->list);
         if (KeySystemList_IsChanged(wk->list) && KeySystemMsgWin_IsDone(wk->infoWin)) {
             KeySystemMsgWin_PrintMsg(wk->infoWin, wk->msgData, KeySystemList_GetCursor(wk->list) + 72,
@@ -964,18 +1009,18 @@ static void KeySystem_SeqTopMenu(KeySystemSeq *seq, int *state, void *work) {
         if (KeySystemList_IsDecided(wk->list)) {
             wk->choice = KeySystemList_GetCursor(wk->list);
             if (wk->choice == TOP_MENU_BACK) {
-                *state = 4;
+                *state = TOP_MENU_SEQ_END;
                 return;
             }
             KeySystemTags_Set(wk->tags, "MAN", KeySystemList_GetCursor(wk->list));
             (*state)++;
         }
         break;
-    case 2:
+    case TOP_MENU_SEQ_END_SCENE:
         KeySystemSeq_Push(seq, KeySystem_SeqEndScene);
         (*state)++;
         break;
-    case 3:
+    case TOP_MENU_SEQ_RUN_CHOICE:
         switch (wk->choice) {
         case TOP_MENU_KEY_SYSTEM:
             KeySystemBG_StartFade(wk->bg, KEY_SYSTEM_BG_FADE_1_TO_0, 30);
@@ -990,28 +1035,34 @@ static void KeySystem_SeqTopMenu(KeySystemSeq *seq, int *state, void *work) {
             KeySystemSeq_Push(seq, CygnusFlow_SeqMenu);
             break;
         }
-        *state = 0;
+        *state = TOP_MENU_SEQ_START_SCENE;
         break;
-    case 4:
+    case TOP_MENU_SEQ_END:
         KeySystemSeq_Pop(seq);
         break;
     }
 }
 
+enum {
+    SCENE_SEQ_START,
+    SCENE_SEQ_WAIT_IDLE,
+    SCENE_SEQ_END,
+};
+
 static void KeySystem_SeqStartTopScene(KeySystemSeq *seq, int *state, void *work) {
     KeySystemWork *wk = work;
 
     switch (*state) {
-    case 0:
+    case SCENE_SEQ_START:
         KeySystemScene_Start(wk->scene, &sTopSceneFuncs, HEAPID_KEY_SYSTEM);
         (*state)++;
         break;
-    case 1:
+    case SCENE_SEQ_WAIT_IDLE:
         if (KeySystemScene_IsIdle(wk->scene)) {
             (*state)++;
         }
         break;
-    case 2:
+    case SCENE_SEQ_END:
         KeySystemSeq_Pop(seq);
         break;
     }
@@ -1021,16 +1072,16 @@ static void KeySystem_SeqStartMsgScene(KeySystemSeq *seq, int *state, void *work
     KeySystemWork *wk = work;
 
     switch (*state) {
-    case 0:
+    case SCENE_SEQ_START:
         KeySystemScene_Start(wk->scene, &sMsgSceneFuncs, HEAPID_KEY_SYSTEM);
         (*state)++;
         break;
-    case 1:
+    case SCENE_SEQ_WAIT_IDLE:
         if (KeySystemScene_IsIdle(wk->scene)) {
             (*state)++;
         }
         break;
-    case 2:
+    case SCENE_SEQ_END:
         KeySystemSeq_Pop(seq);
         break;
     }
