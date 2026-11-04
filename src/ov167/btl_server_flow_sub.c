@@ -95,7 +95,7 @@ u8 CollectMoveTargets(BtlServerFlow *flow, BattleMon *mon, u8 target, BtlFlowMov
     BattleMon *first;
 
     style = BtlSetup_GetBattleStyle(flow->mainModule);
-    redirect = 0x1f;
+    redirect = BTL_MON_ID_NONE;
     if (!param->flags.reflected) {
         redirect = ServerEvent_DecideMoveTarget(flow, mon, param);
     }
@@ -140,12 +140,12 @@ static u8 CollectTargetsSingle(BtlServerFlow *flow, BattleMon *mon, u8 target, B
     case MOVE_TARGET_ALL_ADJACENT:
     case MOVE_TARGET_ADJACENT_FOES:
     case MOVE_TARGET_RANDOM_FOE:
-        BtlMonSet_Add(targets,
-                      redirect == 0x1f ? GetOpposingMonAt(flow, pos, 0) : GetPokeParam(flow->pokeCon, redirect));
+        BtlMonSet_Add(targets, redirect == BTL_MON_ID_NONE ? GetOpposingMonAt(flow, pos, 0)
+                                                           : GetPokeParam(flow->pokeCon, redirect));
         return 1;
     case MOVE_TARGET_USER_OR_ALLY:
     case MOVE_TARGET_USER:
-        if (redirect == 0x1f) {
+        if (redirect == BTL_MON_ID_NONE) {
             BtlMonSet_Add(targets, mon);
         } else {
             BtlMonSet_Add(targets, GetPokeParam(flow->pokeCon, redirect));
@@ -156,7 +156,7 @@ static u8 CollectTargetsSingle(BtlServerFlow *flow, BattleMon *mon, u8 target, B
         BtlMonSet_Add(targets, GetOpposingMonAt(flow, pos, 0));
         return 2;
     case MOVE_TARGET_DEPENDS:
-        if (redirect != 0x1f) {
+        if (redirect != BTL_MON_ID_NONE) {
             BtlMonSet_Add(targets, GetPokeParam(flow->pokeCon, redirect));
             return 1;
         }
@@ -217,7 +217,7 @@ static u8 CollectTargetsDouble(BtlServerFlow *flow, BattleMon *mon, u8 target, B
         BtlMonSet_Add(targets, GetOpposingMonAt(flow, pos, 1));
         return 3;
     case MOVE_TARGET_USER:
-        if (redirect == 0x1f) {
+        if (redirect == BTL_MON_ID_NONE) {
             BtlMonSet_Add(targets, mon);
         } else {
             BtlMonSet_Add(targets, GetPokeParam(flow->pokeCon, redirect));
@@ -230,7 +230,7 @@ static u8 CollectTargetsDouble(BtlServerFlow *flow, BattleMon *mon, u8 target, B
         BtlMonSet_Add(targets, GetAllyMonAt(flow, pos));
         return 1;
     case MOVE_TARGET_DEPENDS:
-        if (redirect != 0x1f) {
+        if (redirect != BTL_MON_ID_NONE) {
             single = GetPokeParam(flow->pokeCon, redirect);
             break;
         }
@@ -240,7 +240,7 @@ static u8 CollectTargetsDouble(BtlServerFlow *flow, BattleMon *mon, u8 target, B
     }
     if (single != NULL) {
         newTarget = RedirectMoveTarget(flow, mon, param, GetMonID(single));
-        if (newTarget != 0x1f) {
+        if (newTarget != BTL_MON_ID_NONE) {
             single = GetPokeParam(flow->pokeCon, newTarget);
         }
         BtlMonSet_Add(targets, single);
@@ -308,7 +308,7 @@ static u8 CollectTargetsTriple(BtlServerFlow *flow, BattleMon *mon, u8 target, B
         BtlMonSet_Add(targets, GetOpposingMonAt(flow, pos, 2));
         return 6;
     case MOVE_TARGET_USER:
-        if (redirect == 0x1f) {
+        if (redirect == BTL_MON_ID_NONE) {
             BtlMonSet_Add(targets, mon);
         } else {
             BtlMonSet_Add(targets, GetPokeParam(flow->pokeCon, redirect));
@@ -321,7 +321,7 @@ static u8 CollectTargetsTriple(BtlServerFlow *flow, BattleMon *mon, u8 target, B
         BtlMonSet_Add(targets, PokeCon_GetPosMon(flow->pokeCon, targetPos));
         return 1;
     case MOVE_TARGET_DEPENDS:
-        if (redirect != 0x1f) {
+        if (redirect != BTL_MON_ID_NONE) {
             single = GetPokeParam(flow->pokeCon, redirect);
             break;
         }
@@ -331,7 +331,7 @@ static u8 CollectTargetsTriple(BtlServerFlow *flow, BattleMon *mon, u8 target, B
     }
     if (single != NULL) {
         newTarget = RedirectMoveTarget(flow, mon, param, GetMonID(single));
-        if (newTarget != 0x1f) {
+        if (newTarget != BTL_MON_ID_NONE) {
             single = GetPokeParam(flow->pokeCon, newTarget);
         }
         BtlMonSet_Add(targets, single);
@@ -448,7 +448,7 @@ static u8 ServerEvent_DecideMoveTarget(BtlServerFlow *flow, BattleMon *mon, BtlF
     BattleEventVar_SetConstValue(BTL_EVAR_ATTACKER, GetMonID(mon));
     BattleEventVar_SetConstValue(BTL_EVAR_MOVE_TYPE, param->type);
     BattleEventVar_SetConstValue(BTL_EVAR_MOVE, param->move);
-    BattleEventVar_SetRewriteOnceValue(BTL_EVAR_DEFENDER, 0x1f);
+    BattleEventVar_SetRewriteOnceValue(BTL_EVAR_DEFENDER, BTL_MON_ID_NONE);
     BattleEventVar_SetRewriteOnceValue(0x50, FALSE);
     BattleEvent_CallHandlers(flow, BTL_EVENT_DECIDE_MOVE_TARGET);
     monId = BattleEventVar_GetValue(BTL_EVAR_DEFENDER);
@@ -469,7 +469,7 @@ static u8 ServerEvent_BaitMoveTarget(BtlServerFlow *flow, BattleMon *mon, BtlFlo
     newTarget = BattleEventVar_GetValue(BTL_EVAR_DEFENDER);
     BattleEventVar_Pop(0x29f);
     if (newTarget == targetId) {
-        newTarget = 0x1f;
+        newTarget = BTL_MON_ID_NONE;
     }
     return newTarget;
 }
@@ -750,7 +750,7 @@ u8 UseBagItem(BtlServerFlow *flow, BattleMon *mon, u16 item, u8 param, u8 slot) 
     clientId = GetClientIDFromMonID(GetMonID(mon));
     target = NULL;
     placed = 0;
-    if (slot != 6) {
+    if (slot != BTL_PARTY_SLOT_NONE) {
         party = GetPartyData(flow->pokeCon, clientId);
         numOut = GetClientBattlerCount(flow->mainModule, clientId);
         target = BattleParty_GetMon(party, slot);
@@ -1542,7 +1542,7 @@ s32 CheckScriptedBattleRules(BtlMainModule *mainModule, BtlPokeCon *pokeCon) {
         u32 value = GetPlayerFirstActionMove(mainModule);
 
         if (targetDown) {
-            if (value == rules->unk16) {
+            if (value == rules->winMove) {
                 won = TRUE;
             } else {
                 outcomes[0] = -9;
@@ -1725,7 +1725,7 @@ u32 CalcBattleResult(BtlServerFlow *flow) {
         }
         if (alive[0] == 0) {
             monId = BtlFaintRec_GetLastFainted(&flow->faintRec);
-            if (monId != 0x1f) {
+            if (monId != BTL_MON_ID_NONE) {
                 monSide = GetSideFromMonID(monId);
                 if (monSide == side) {
                     return BTL_RESULT_VICTORY;
