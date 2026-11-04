@@ -556,24 +556,30 @@ void ShortcutMenu_Open(u32 mode, ShortcutMenuWork *work) {
     }
 }
 
+typedef enum {
+    SHORTCUT_MENU_CLOSE_STEP_DELETE_APP,
+    SHORTCUT_MENU_CLOSE_STEP_SETUP_MSG_BG,
+    SHORTCUT_MENU_CLOSE_STEP_DONE,
+} ShortcutMenuCloseStep;
+
 BOOL ShortcutMenu_Close(ShortcutMenuWork *work) {
     if (work->done == 0) {
         switch (work->state) {
-        case 0:
+        case SHORTCUT_MENU_CLOSE_STEP_DELETE_APP:
             if (work->app) {
                 GFL_BGSysSetBGEnabled(1, 0);
                 ShortcutMenu_Delete(work->app);
                 work->app = NULL;
-                work->state = 1;
+                work->state = SHORTCUT_MENU_CLOSE_STEP_SETUP_MSG_BG;
             } else {
-                work->state = 2;
+                work->state = SHORTCUT_MENU_CLOSE_STEP_DONE;
             }
             break;
-        case 1:
+        case SHORTCUT_MENU_CLOSE_STEP_SETUP_MSG_BG:
             MsgBGPrinter_SetupBgSingle(Field_GetMsgBGSys(work->field));
-            work->state = 2;
+            work->state = SHORTCUT_MENU_CLOSE_STEP_DONE;
             break;
-        case 2:
+        case SHORTCUT_MENU_CLOSE_STEP_DONE:
             work->state = 0;
             return TRUE;
         }
@@ -581,6 +587,12 @@ BOOL ShortcutMenu_Close(ShortcutMenuWork *work) {
     }
     return TRUE;
 }
+
+typedef enum {
+    SHORTCUT_MENU_RETRY_STEP_START,
+    SHORTCUT_MENU_RETRY_STEP_WAIT_PRINT,
+    SHORTCUT_MENU_RETRY_STEP_DONE,
+} ShortcutMenuRetryStep;
 
 BOOL ShortcutMenu_CanRetry(FieldAppCallInput *input, void *arg) {
     ShortcutMenuWork *work = arg;
@@ -592,24 +604,24 @@ BOOL ShortcutMenu_CanRetry(FieldAppCallInput *input, void *arg) {
     save = GameData_GetSaveControl(gameData);
     shortcut = SaveControl_GetShortcutSave(save);
     switch (work->state) {
-    case 0:
+    case SHORTCUT_MENU_RETRY_STEP_START:
         if (ShortcutSave_GetShortcutCount(shortcut) == 0) {
             work->done = 1;
-            work->state = 2;
+            work->state = SHORTCUT_MENU_RETRY_STEP_DONE;
         } else if (input->eventType == FIELD_APP_RESULT_EXIT || input->eventType == FIELD_APP_RESULT_COMMON_EVENT ||
                    input->eventType == FIELD_APP_RESULT_HM_EVENT || input->eventType == FIELD_APP_RESULT_SCRIPT) {
-            work->state = 2;
+            work->state = SHORTCUT_MENU_RETRY_STEP_DONE;
         } else {
             ShortcutMenu_Open(SHORTCUT_MENU_START_OPEN, work);
-            work->state = 1;
+            work->state = SHORTCUT_MENU_RETRY_STEP_WAIT_PRINT;
         }
         break;
-    case 1:
+    case SHORTCUT_MENU_RETRY_STEP_WAIT_PRINT:
         if (ShortcutMenu_RunPrint(work->app)) {
-            work->state = 2;
+            work->state = SHORTCUT_MENU_RETRY_STEP_DONE;
         }
         break;
-    case 2:
+    case SHORTCUT_MENU_RETRY_STEP_DONE:
         work->state = 0;
         return TRUE;
     }
