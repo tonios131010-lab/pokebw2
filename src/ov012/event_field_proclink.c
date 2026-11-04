@@ -635,12 +635,27 @@ void *FieldAppCall_CreateBagParam(FieldAppCallWork *work, s32 appParam, s32 prev
     return param;
 }
 
+typedef enum {
+    BAG_RESULT_CLOSE = 0,
+    BAG_RESULT_TOWNMAP = 7,
+    BAG_RESULT_WIFI_NOTE = 8,
+    BAG_RESULT_ENTRALINK = 13,
+    BAG_RESULT_ESCAPE_ROPE = 14,
+    BAG_RESULT_SWEET_SCENT = 15,
+    BAG_RESULT_FISHING = 16,
+    BAG_RESULT_BATTLE_RECORDER = 17,
+    BAG_RESULT_MAIL = 19,
+    BAG_RESULT_DOWSING = 20,
+    BAG_RESULT_XTRANSCEIVER = 21,
+    BAG_RESULT_MEDALBOX = 22,
+} BagResult;
+
 u32 FieldAppCall_GetBagResult(FieldAppCallWork *work, void *data) {
     BagProcessData *param = data;
     GameData *gameData;
 
     switch (param->result) {
-    case 0:
+    case BAG_RESULT_CLOSE:
         return FIELD_APP_RESULT_EXIT;
     case 1:
         if (param->mode == 2) {
@@ -655,34 +670,34 @@ u32 FieldAppCall_GetBagResult(FieldAppCallWork *work, void *data) {
     case 11:
         work->input->eventId = FIELD_COMMON_EVENT_CYCLING;
         return FIELD_APP_RESULT_COMMON_EVENT;
-    case 13:
+    case BAG_RESULT_ENTRALINK:
         work->input->eventId = FIELD_COMMON_EVENT_ENTRALINK;
         return FIELD_APP_RESULT_COMMON_EVENT;
-    case 15:
+    case BAG_RESULT_SWEET_SCENT:
         work->input->eventId = FIELD_COMMON_EVENT_SWEET_SCENT;
         return FIELD_APP_RESULT_COMMON_EVENT;
-    case 16:
+    case BAG_RESULT_FISHING:
         work->input->eventId = FIELD_COMMON_EVENT_FISHING;
         return FIELD_APP_RESULT_COMMON_EVENT;
-    case 14:
+    case BAG_RESULT_ESCAPE_ROPE:
         work->input->eventId = FIELD_COMMON_EVENT_ESCAPE_ROPE;
         return FIELD_APP_RESULT_COMMON_EVENT;
-    case 8:
+    case BAG_RESULT_WIFI_NOTE:
         work->nextAppId = FIELD_APP_WIFI_NOTE;
         return FIELD_APP_RESULT_NEXT;
-    case 7:
+    case BAG_RESULT_TOWNMAP:
         work->nextAppId = FIELD_APP_TOWNMAP;
         return FIELD_APP_RESULT_NEXT;
-    case 22:
+    case BAG_RESULT_MEDALBOX:
         work->nextAppId = FIELD_APP_MEDALBOX;
         return FIELD_APP_RESULT_NEXT;
-    case 17:
+    case BAG_RESULT_BATTLE_RECORDER:
         work->nextAppId = FIELD_APP_BATTLE_RECORDER;
         return FIELD_APP_RESULT_NEXT;
-    case 21:
+    case BAG_RESULT_XTRANSCEIVER:
         work->nextAppId = FIELD_APP_XTRANSCEIVER;
         return FIELD_APP_RESULT_NEXT;
-    case 19:
+    case BAG_RESULT_MAIL:
         work->nextAppId = FIELD_APP_MAIL;
         return FIELD_APP_RESULT_NEXT;
     case 18:
@@ -695,7 +710,7 @@ u32 FieldAppCall_GetBagResult(FieldAppCallWork *work, void *data) {
         }
         work->subMode = 2;
         return FIELD_APP_RESULT_NEXT;
-    case 20:
+    case BAG_RESULT_DOWSING:
         work->input->eventId = FIELD_COMMON_EVENT_DOWSING;
         return FIELD_APP_RESULT_COMMON_EVENT;
     case 2:
