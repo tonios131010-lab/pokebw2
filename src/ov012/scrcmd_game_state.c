@@ -318,6 +318,11 @@ BOOL Scrcmd_GameState_PokeDexRegist(VM *vm, FieldScriptEnv *env) {
     return FALSE;
 }
 
+typedef enum {
+    POKEDEX_QUERY_SEEN,
+    POKEDEX_QUERY_CAUGHT,
+} PokedexQuery;
+
 BOOL Scrcmd_GameState_PokeDexIsRegist(VM *vm, FieldScriptEnv *env) {
     PokeDexSave *pokedex = GameData_GetPokedex(FieldScriptEnv_GetGameData(env));
     u16 kind = ScriptReadAny(vm, env);
@@ -325,10 +330,10 @@ BOOL Scrcmd_GameState_PokeDexIsRegist(VM *vm, FieldScriptEnv *env) {
     u16 *result = ScriptReadVar(vm, env);
 
     switch (kind) {
-    case 0:
+    case POKEDEX_QUERY_SEEN:
         *result = PokeDex_IsSeen(pokedex, species);
         break;
-    case 1:
+    case POKEDEX_QUERY_CAUGHT:
         *result = PokeDex_IsCaught(pokedex, species);
         break;
     default:
@@ -344,10 +349,10 @@ BOOL Scrcmd_GameState_PokeDexGetCount(VM *vm, FieldScriptEnv *env) {
     u16 *result = ScriptReadVar(vm, env);
 
     switch (kind) {
-    case 0:
+    case POKEDEX_QUERY_SEEN:
         *result = PokeDex_GetSeenNoNational(pokedex);
         break;
-    case 1:
+    case POKEDEX_QUERY_CAUGHT:
         *result = PokeDex_GetCaughtNoNational(pokedex);
         break;
     default:
@@ -386,15 +391,20 @@ BOOL Scrcmd_GameState_PokeDexEnableHabitatList(VM *vm, FieldScriptEnv *env) {
 // The system UI flags that Scrcmd_GameState_SetSoftResetBlocked sets and clears
 static const u32 sSystemUIFlags[1] = { 0x40 };
 
+typedef enum {
+    SOFT_RESET_BLOCK,
+    SOFT_RESET_UNBLOCK,
+} SoftResetBlockMode;
+
 BOOL Scrcmd_GameState_SetSoftResetBlocked(VM *vm, FieldScriptEnv *env) {
     u16 mode = ScriptReadAny(vm, env);
     u16 index = ScriptReadAny(vm, env);
 
     switch (mode) {
-    case 0:
+    case SOFT_RESET_BLOCK:
         GCTX_HIDBlockSoftReset(sSystemUIFlags[index]);
         break;
-    case 1:
+    case SOFT_RESET_UNBLOCK:
         GCTX_HIDUnblockSoftReset(sSystemUIFlags[index]);
         break;
     }
