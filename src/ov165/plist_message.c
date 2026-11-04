@@ -195,6 +195,12 @@ BOOL PokeListMessage_IsDone(PokeListWork *wk, PokeListMessage *msg) {
 }
 
 // The events of the messages' control codes: a fanfare, a sound, and waiting for them
+enum {
+    MSG_EVENT_LEVEL_UP_FANFARE = 2,
+    MSG_EVENT_SE,
+    MSG_EVENT_WAIT_FANFARE = 5,
+    MSG_EVENT_WAIT_SOUND,
+};
 static BOOL PokeListMessage_StreamCallback(u32 event) {
     switch (event) {
     case 2:
