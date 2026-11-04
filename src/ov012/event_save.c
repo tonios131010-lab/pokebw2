@@ -62,6 +62,12 @@ typedef enum {
     THIRD_ACTOR_PRESENT,
 } ThirdActorKind;
 
+typedef enum {
+    PREPARE_RESIDENT_ACTORS_STEP_STOP_ACTORS,
+    PREPARE_RESIDENT_ACTORS_STEP_WAIT_ACTORS,
+    PREPARE_RESIDENT_ACTORS_STEP_DONE,
+} PrepareResidentActorsStep;
+
 GameEventReturnCode EventPrepareResidentActors_Callback(GameEvent *event, u32 *state, void *data) {
     PrepareResidentActorsWork *work = data;
     Field *field = work->field;
@@ -72,7 +78,7 @@ GameEventReturnCode EventPrepareResidentActors_Callback(GameEvent *event, u32 *s
     ThirdActorKind kind;
 
     switch (*state) {
-    case 0:
+    case PREPARE_RESIDENT_ACTORS_STEP_STOP_ACTORS:
         actorSystem = Field_GetActorSystem(field);
         player = FindPlayerFieldActor(actorSystem);
         actor = FindActorByMoveCode(actorSystem, MOVE_CODE_FOLLOW_PLAYER);
@@ -94,7 +100,7 @@ GameEventReturnCode EventPrepareResidentActors_Callback(GameEvent *event, u32 *s
         }
         (*state)++;
         break;
-    case 1:
+    case PREPARE_RESIDENT_ACTORS_STEP_WAIT_ACTORS:
         actorSystem = Field_GetActorSystem(field);
         player = FindPlayerFieldActor(actorSystem);
         if ((work->movingActors & RESIDENT_ACTOR_PLAYER) && FldAct_CheckAcmdEnd(player) == TRUE) {
@@ -119,7 +125,7 @@ GameEventReturnCode EventPrepareResidentActors_Callback(GameEvent *event, u32 *s
             (*state)++;
         }
         break;
-    case 2:
+    case PREPARE_RESIDENT_ACTORS_STEP_DONE:
         return GAMEEVENT_DONE;
     }
     return GAMEEVENT_CONTINUE;
