@@ -66,6 +66,11 @@ BOOL Scrcmd_DownloadData_WordSetMemoryLinkPlayerName(VM *vm, FieldScriptEnv *env
 }
 
 // Mode 0: whether the downloaded props were added. Mode 1: whether the musical's program is at least the downloaded one
+typedef enum {
+    MEMORY_LINK_MUSICAL_CHECK_PROPS_ADDED,
+    MEMORY_LINK_MUSICAL_CHECK_PROGRAM_CURRENT,
+} MemoryLinkMusicalCheck;
+
 BOOL Scrcmd_DownloadData_MemoryLinkCheckMusical(VM *vm, FieldScriptEnv *env) {
     ScriptWork *work = FieldScriptEnv_GetScriptWork(env);
     SaveControl *save = GameData_GetSaveControl(GSYS_GetGameData(FieldScriptEnv_GetGameSystem(env)));
@@ -75,10 +80,10 @@ BOOL Scrcmd_DownloadData_MemoryLinkCheckMusical(VM *vm, FieldScriptEnv *env) {
     u16 *result = ScriptReadVar(vm, env);
 
     switch (mode) {
-    case 0:
+    case MEMORY_LINK_MUSICAL_CHECK_PROPS_ADDED:
         *result = MusicalSave_GetDownloadedProps(musical);
         break;
-    case 1: {
+    case MEMORY_LINK_MUSICAL_CHECK_PROGRAM_CURRENT: {
         u16 current = FALSE;
 
         if (MemoryLinkSave_GetValue(data, MEMORY_LINK_KIND_MUSICAL_TOTAL_POINTS, NULL) <=
