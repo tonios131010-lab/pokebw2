@@ -102,6 +102,91 @@ enum {
     // Not a battle's selection, or an empty slot
     POKELIST_ENTRY_EMPTY,
 };
+// What the screen is doing, PokeListWork's state
+enum {
+    POKELIST_STATE_WIPE_IN,
+    POKELIST_STATE_WAIT_WIPE_IN,
+    POKELIST_STATE_SELECT,
+    // Picking the Pokémon to switch places with
+    POKELIST_STATE_SELECT_SWITCH,
+    // Picking the Pokémon that Softboiled or Milk Drink gives HP to
+    POKELIST_STATE_SELECT_HP_RECIPIENT,
+    POKELIST_STATE_SWAP,
+    POKELIST_STATE_MENU,
+    POKELIST_STATE_MESSAGE,
+    POKELIST_STATE_IDLE,
+    POKELIST_STATE_YES_NO,
+    POKELIST_STATE_HP_CHANGE_START,
+    POKELIST_STATE_HP_CHANGE,
+    // The confirm button of a battle's selection is flashing
+    POKELIST_STATE_CONFIRM_BUTTON,
+    POKELIST_STATE_LEVEL_UP,
+    POKELIST_STATE_DEMO_START,
+    POKELIST_STATE_DEMO,
+    POKELIST_STATE_DEMO_END,
+    POKELIST_STATE_SYNC_START,
+    POKELIST_STATE_SYNC_WAIT,
+    // Waits for the pressed button to finish its animation, then fades out
+    POKELIST_STATE_WAIT_BUTTON,
+    POKELIST_STATE_FADE_OUT,
+    POKELIST_STATE_WAIT_FADE_OUT,
+    // Picking the Pokémon to move the held item or mail to
+    POKELIST_STATE_SELECT_ITEM_RECIPIENT,
+    // Picking the Pokémon to fuse with Kyurem
+    POKELIST_STATE_SELECT_FUSION_PARTNER,
+};
+
+// What PokeListWork's input holds once the cursor or touch picked something
+enum {
+    POKELIST_INPUT_CONFIRM,
+    POKELIST_INPUT_BACK,
+    POKELIST_INPUT_SHORTCUT,
+    POKELIST_INPUT_POKEMON,
+    POKELIST_INPUT_NONE,
+};
+
+// The form changes that plist_demo.c shows, in PokeListWork's demo
+enum {
+    POKELIST_DEMO_NONE,
+    POKELIST_DEMO_ORIGIN,
+    POKELIST_DEMO_ALTERED,
+    POKELIST_DEMO_SKY,
+    POKELIST_DEMO_FUSE,
+    POKELIST_DEMO_SEPARATE,
+    POKELIST_DEMO_THERIAN,
+};
+
+// The menu's items (plist_menu.c). FIELD_MOVES, MOVES and ENTRY only ask for items, which stand in their place
+enum {
+    POKELIST_MENU_SUMMARY,
+    POKELIST_MENU_FIELD_MOVES,
+    POKELIST_MENU_MOVES,
+    POKELIST_MENU_SWITCH,
+    POKELIST_MENU_ITEM,
+    POKELIST_MENU_MAIL,
+    POKELIST_MENU_CANCEL,
+    POKELIST_MENU_SELECT,
+    POKELIST_MENU_ENTRY,
+    POKELIST_MENU_GIVE_ITEM,
+    POKELIST_MENU_TAKE_ITEM,
+    POKELIST_MENU_DRESS_UP,
+    POKELIST_MENU_READ_MAIL,
+    POKELIST_MENU_TAKE_MAIL,
+    POKELIST_MENU_YES,
+    POKELIST_MENU_NO,
+    POKELIST_MENU_MOVE1,
+    POKELIST_MENU_MOVE2,
+    POKELIST_MENU_MOVE3,
+    POKELIST_MENU_MOVE4,
+    POKELIST_MENU_ENTER,
+    POKELIST_MENU_LEAVE,
+    POKELIST_MENU_MOVE_ITEM,
+    POKELIST_MENU_MOVE_MAIL,
+};
+// Ends a list of items, and is what the menu gives while it waits
+#define POKELIST_MENU_END 16
+#define POKELIST_MENU_PICKING 0x19
+
 #define POKELIST_CL_RES_COUNT 23
 #define CL_RES_NONE 0xffffffff
 // The palettes, characters and cell animations in PokeListWork's clResources

@@ -53,7 +53,7 @@ void PokeListDemo_Start(PokeListWork *wk) {
     PokeList_ReleaseBG0(wk);
     PokeList_Init3D(wk);
     PokeListDemo_Setup(wk);
-    wk->state = 15;
+    wk->state = POKELIST_STATE_DEMO;
     wk->demoStep = 0;
 }
 
@@ -80,7 +80,7 @@ void PokeListDemo_End(PokeListWork *wk) {
         PokeListMessage_FreeWordSet(wk, wk->message);
         break;
     default:
-        wk->state = 19;
+        wk->state = POKELIST_STATE_WAIT_BUTTON;
         break;
     }
 }
@@ -101,7 +101,7 @@ void PokeListDemo_Update(PokeListWork *wk) {
         break;
     }
     if (done) {
-        wk->state = 16;
+        wk->state = POKELIST_STATE_DEMO_END;
     }
     Particle_UpdateAll();
     GFL_G3DSysReset();
@@ -197,6 +197,22 @@ static void PokeListDemo_FreeParticles(PokeListWork *wk) {
         }
     }
 }
+
+enum {
+    DEMO_FORM_START,
+    DEMO_FORM_WAIT_EFFECT,
+    DEMO_FORM_PLAY_VOICE,
+    DEMO_FORM_WAIT_VOICE,
+};
+
+enum {
+    DEMO_FUSION_START,
+    DEMO_FUSION_WAIT_EFFECT,
+    DEMO_FUSION_CHANGE_PARTY,
+    DEMO_FUSION_PLAY_VOICE,
+    DEMO_FUSION_WAIT_VOICE,
+    DEMO_FUSION_WAIT_WIPE,
+};
 
 // A form change on one plate: the effect, the new form, then the cry
 static BOOL PokeListDemo_UpdateForm(PokeListWork *wk) {

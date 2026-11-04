@@ -13,12 +13,9 @@
 
 // The party list's menus: what to do with a Pokémon, yes or no, and the buttons of a battle's selection
 
-// The items: 0 summary, 1 the moves usable outside battle, 2 the moves to restore, 3 switch, 4 item, 5 mail,
-// 6 back, 7 select, 8 joining or leaving a battle's order, 9 give, 10 take, 11 dress up, 12 read, 13 take mail,
-// 14 yes, 15 no, 16 to 19 the moves, and 16 also ends a list, 20 join, 21 leave, 22 and 23 move an item or mail
+// The items are the POKELIST_MENU_* of pokelist.h: FIELD_MOVES stands for the moves usable outside battle, MOVES
+// for the moves to restore, and ENTRY for joining or leaving a battle's order
 #define POKELIST_MENU_MAX 8
-#define POKELIST_MENU_END 16
-#define POKELIST_MENU_MOVE1 16
 
 struct PokeListMenu {
     u8 count;
@@ -71,7 +68,7 @@ void PokeListMenu_Open(PokeListWork *wk, PokeListMenu *menu, const u32 *items) {
 
 void PokeListMenu_OpenYesNo(PokeListWork *wk, PokeListMenu *menu) {
     AppTaskMenuInit setup;
-    u32 items[3] = { 14, 15, POKELIST_MENU_END };
+    u32 items[3] = { POKELIST_MENU_YES, POKELIST_MENU_NO, POKELIST_MENU_END };
 
     PokeListMenu_SetItems(wk, menu, items);
     setup.heapId = wk->heapId;
@@ -103,7 +100,7 @@ void PokeListMenu_Update(PokeListWork *wk, PokeListMenu *menu) {
 // The item picked, or 0x19 while the menu waits
 u32 PokeListMenu_GetPicked(PokeListWork *wk, PokeListMenu *menu) {
     if (AppTaskMenu_IsFlashFinished(menu->taskMenu) == FALSE) {
-        return 0x19;
+        return POKELIST_MENU_PICKING;
     }
     return menu->items[AppTaskMenu_GetCursorPos(menu->taskMenu)];
 }
@@ -123,7 +120,7 @@ static void PokeListMenu_SetItems(PokeListWork *wk, PokeListMenu *menu, const u3
     for (i = 0; i < count; i++) {
         switch (items[i]) {
         case 0:
-            menu->items[menu->count] = 0;
+            menu->items[menu->count] = POKELIST_MENU_SUMMARY;
             menu->count++;
             break;
         case 1: {
@@ -149,71 +146,71 @@ static void PokeListMenu_SetItems(PokeListWork *wk, PokeListMenu *menu, const u3
             break;
         }
         case 3:
-            menu->items[menu->count] = 3;
+            menu->items[menu->count] = POKELIST_MENU_SWITCH;
             menu->count++;
             break;
         case 4:
-            menu->items[menu->count] = 4;
+            menu->items[menu->count] = POKELIST_MENU_ITEM;
             menu->count++;
             break;
         case 5:
-            menu->items[menu->count] = 5;
+            menu->items[menu->count] = POKELIST_MENU_MAIL;
             menu->count++;
             break;
         case 6:
-            menu->items[menu->count] = 6;
+            menu->items[menu->count] = POKELIST_MENU_CANCEL;
             menu->count++;
             break;
         case 7:
-            menu->items[menu->count] = 7;
+            menu->items[menu->count] = POKELIST_MENU_SELECT;
             menu->count++;
             break;
         case 8: {
             int entry = PokeListPlate_GetEntry(wk->plates[wk->cursorPos]);
 
             if (entry == POKELIST_ENTRY_ABLE) {
-                menu->items[menu->count] = 20;
+                menu->items[menu->count] = POKELIST_MENU_ENTER;
                 menu->count++;
             } else if (entry <= 5) {
-                menu->items[menu->count] = 21;
+                menu->items[menu->count] = POKELIST_MENU_LEAVE;
                 menu->count++;
             }
             break;
         }
         case 9:
-            menu->items[menu->count] = 9;
+            menu->items[menu->count] = POKELIST_MENU_GIVE_ITEM;
             menu->count++;
             break;
         case 10:
-            menu->items[menu->count] = 10;
+            menu->items[menu->count] = POKELIST_MENU_TAKE_ITEM;
             menu->count++;
             break;
         case 22:
-            menu->items[menu->count] = 22;
+            menu->items[menu->count] = POKELIST_MENU_MOVE_ITEM;
             menu->count++;
             break;
         case 11:
-            menu->items[menu->count] = 11;
+            menu->items[menu->count] = POKELIST_MENU_DRESS_UP;
             menu->count++;
             break;
         case 12:
-            menu->items[menu->count] = 12;
+            menu->items[menu->count] = POKELIST_MENU_READ_MAIL;
             menu->count++;
             break;
         case 13:
-            menu->items[menu->count] = 13;
+            menu->items[menu->count] = POKELIST_MENU_TAKE_MAIL;
             menu->count++;
             break;
         case 23:
-            menu->items[menu->count] = 23;
+            menu->items[menu->count] = POKELIST_MENU_MOVE_MAIL;
             menu->count++;
             break;
         case 14:
-            menu->items[menu->count] = 14;
+            menu->items[menu->count] = POKELIST_MENU_YES;
             menu->count++;
             break;
         case 15:
-            menu->items[menu->count] = 15;
+            menu->items[menu->count] = POKELIST_MENU_NO;
             menu->count++;
             break;
         }
@@ -226,7 +223,7 @@ static void PokeListMenu_SetItems(PokeListWork *wk, PokeListMenu *menu, const u3
         } else {
             menu->entries[i].color = 0x39e0;
         }
-        menu->entries[i].type = menu->items[i] == 6 ? APP_TASKMENU_ITEM_RETURN : 0;
+        menu->entries[i].type = menu->items[i] == POKELIST_MENU_CANCEL ? APP_TASKMENU_ITEM_RETURN : 0;
     }
 }
 

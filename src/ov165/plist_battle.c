@@ -113,7 +113,7 @@ void PokeListBattle_Update(PokeListWork *wk) {
             break;
         }
     }
-    if (wk->shownBattleMsg != wk->param->battleMsg && wk->state == 2) {
+    if (wk->shownBattleMsg != wk->param->battleMsg && wk->state == POKELIST_STATE_SELECT) {
         PokeListBattle_PrintMessage(wk);
         wk->shownBattleMsg = wk->param->battleMsg;
     }

@@ -285,7 +285,7 @@ u32 PokeList_ShowItemResult(PokeListWork *wk, u32 move) {
 
     switch (effect) {
     case 1:
-        wk->state = 10;
+        wk->state = POKELIST_STATE_HP_CHANGE_START;
         wk->prevHp = PokeListPlate_GetHp(wk, wk->plates[wk->cursorPos]);
         wk->hpDoneFunc = PokeList_ItemReviveDone;
         break;
@@ -328,7 +328,7 @@ u32 PokeList_ShowItemResult(PokeListWork *wk, u32 move) {
         break;
     case 11:
     case 12:
-        wk->state = 10;
+        wk->state = POKELIST_STATE_HP_CHANGE_START;
         wk->prevHp = PokeListPlate_GetHp(wk, wk->plates[wk->cursorPos]);
         wk->hpDoneFunc = PokeList_ItemHealDone;
         break;
@@ -415,7 +415,7 @@ static void PokeList_ItemReviveNext(PokeListWork *wk) {
 }
 
 static void PokeList_LevelUpMessageDone(PokeListWork *wk) {
-    wk->state = 13;
+    wk->state = POKELIST_STATE_LEVEL_UP;
     wk->subState = 0;
     wk->param->learnIndex = 0;
     PokeListMessage_DrawKeyCursor(wk, wk->message);
@@ -423,9 +423,20 @@ static void PokeList_LevelUpMessageDone(PokeListWork *wk) {
 
 // Called once the message of a move learned is read: on to the next move
 void PokeList_LearnMessageDone(PokeListWork *wk) {
-    wk->state = 13;
+    wk->state = POKELIST_STATE_LEVEL_UP;
     wk->subState = 6;
 }
+
+enum {
+    LEVEL_UP_DRAW_GAINS,
+    LEVEL_UP_WAIT_GAINS_PRINT,
+    LEVEL_UP_WAIT_GAINS_INPUT,
+    LEVEL_UP_DRAW_STATS,
+    LEVEL_UP_WAIT_STATS_PRINT,
+    LEVEL_UP_WAIT_STATS_INPUT,
+    LEVEL_UP_LEARN_MOVES,
+    LEVEL_UP_CHECK_EVOLUTION,
+};
 
 // The level up: shows the stats' gains, then the stats, then teaches the moves learned at the level, and checks for
 // an evolution
@@ -474,20 +485,20 @@ void PokeList_UpdateLevelUp(PokeListWork *wk) {
                                   0x440);
             GFL_StrBufFree(plus);
         }
-        wk->subState = 1;
+        wk->subState = LEVEL_UP_WAIT_GAINS_PRINT;
         break;
     }
     case 1:
         if (PrintQueue_IsBitmapPending(wk->printQueue, BmpWin_GetBitmap(wk->statsWindow)) == FALSE) {
             BmpWin_Transfer(wk->statsWindow);
-            wk->subState = 2;
+            wk->subState = LEVEL_UP_WAIT_GAINS_INPUT;
         }
         break;
     case 2:
         if ((GCTX_HIDGetPressedKeys() & PAD_BUTTON_A) || (GCTX_HIDGetPressedKeys() & PAD_BUTTON_B) ||
             GFL_HIDIsTouchPressed() == TRUE) {
             GFL_SndSEPlay(SEQ_SE_MESSAGE);
-            wk->subState = 3;
+            wk->subState = LEVEL_UP_DRAW_STATS;
         }
         break;
     case 3: {
@@ -510,19 +521,19 @@ void PokeList_UpdateLevelUp(PokeListWork *wk) {
             GFL_StrBufFree(str);
             GFL_WordSetSystemFree(wordSet);
         }
-        wk->subState = 4;
+        wk->subState = LEVEL_UP_WAIT_STATS_PRINT;
         break;
     }
     case 4:
         if (PrintQueue_IsBitmapPending(wk->printQueue, BmpWin_GetBitmap(wk->statsWindow)) == FALSE) {
             BmpWin_Transfer(wk->statsWindow);
-            wk->subState = 5;
+            wk->subState = LEVEL_UP_WAIT_STATS_INPUT;
         }
         break;
     case 5:
         if ((GCTX_HIDGetPressedKeys() & PAD_BUTTON_A) || (GCTX_HIDGetPressedKeys() & PAD_BUTTON_B) ||
             GFL_HIDIsTouchPressed() == TRUE) {
-            wk->subState = 6;
+            wk->subState = LEVEL_UP_LEARN_MOVES;
             GFL_SndSEPlay(SEQ_SE_MESSAGE);
             BmpWin_ClearScreen(wk->statsWindow);
             BmpWin_ClearFrame(wk->statsWindow, WINFRAME_TRANSFER_VBLANK);
@@ -535,9 +546,9 @@ void PokeList_UpdateLevelUp(PokeListWork *wk) {
 
         PokeListMessage_Close(wk, wk->message);
         if (move == 0) {
-            wk->subState = 7;
+            wk->subState = LEVEL_UP_CHECK_EVOLUTION;
         } else if (move == LEARN_MOVE_KNOWN) {
-            wk->subState = 7;
+            wk->subState = LEVEL_UP_CHECK_EVOLUTION;
         } else if (move & LEARN_MOVE_NO_SLOT) {
             wk->param->move = move - LEARN_MOVE_NO_SLOT;
             PokeListMessage_CreateWordSet(wk, wk->message);
@@ -560,7 +571,7 @@ void PokeList_UpdateLevelUp(PokeListWork *wk) {
 
         if (CheckEvolveSpecies(wk->param->party, wk->pkm, 0, wk->param->zoneId, wk->param->season, NULL, wk->heapId) !=
             0) {
-            wk->state = 19;
+            wk->state = POKELIST_STATE_WAIT_BUTTON;
             wk->param->index = wk->cursorPos;
             wk->param->result = 9;
         } else {

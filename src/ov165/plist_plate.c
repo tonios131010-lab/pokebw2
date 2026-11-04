@@ -458,7 +458,8 @@ void PokeListPlate_SetSelected(PokeListWork *wk, PokeListPlate *plate, BOOL sele
     if (selected == TRUE) {
         ClActorPos pos;
 
-        if (wk->state == 3 || wk->state == 4 || wk->state == 23) {
+        if (wk->state == POKELIST_STATE_SELECT_SWITCH || wk->state == POKELIST_STATE_SELECT_HP_RECIPIENT ||
+            wk->state == POKELIST_STATE_SELECT_FUSION_PARTNER) {
             PokeListPlate_SetPalette(wk, plate, 8);
         } else if (PokeList_IsBattle(wk) == TRUE && plate->entry < POKELIST_ENTRY_ABLE) {
             PokeListPlate_SetPalette(wk, plate, 8);
@@ -472,8 +473,9 @@ void PokeListPlate_SetSelected(PokeListWork *wk, PokeListPlate *plate, BOOL sele
     } else {
         ClActorPos pos;
 
-        if ((wk->state == 3 && wk->selectPos == plate->index) || (wk->state == 23 && wk->selectPos == plate->index) ||
-            (wk->state == 4 && wk->selectPos2 == plate->index)) {
+        if ((wk->state == POKELIST_STATE_SELECT_SWITCH && wk->selectPos == plate->index) ||
+            (wk->state == POKELIST_STATE_SELECT_FUSION_PARTNER && wk->selectPos == plate->index) ||
+            (wk->state == POKELIST_STATE_SELECT_HP_RECIPIENT && wk->selectPos2 == plate->index)) {
             PokeListPlate_SetPalette(wk, plate, 5);
         } else if (PokeList_IsBattle(wk) == TRUE && plate->entry < POKELIST_ENTRY_ABLE) {
             PokeListPlate_SetPalette(wk, plate, 5);
