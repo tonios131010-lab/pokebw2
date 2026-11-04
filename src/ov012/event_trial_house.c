@@ -78,18 +78,23 @@ GameEvent *CallTrialHouseTeamSelect(GameSystem *gsys, TrialHouseWork *work, u32 
     return event;
 }
 
+typedef enum {
+    TRIAL_HOUSE_TEAM_SELECT_STEP_START_SELECT,
+    TRIAL_HOUSE_TEAM_SELECT_STEP_CHECK_RESULT,
+} TrialHouseTeamSelectStep;
+
 static GameEventReturnCode EventTrialHouseTeamSelect_Callback(GameEvent *event, u32 *state, void *work) {
     TrialHousePokeSelectData *data = work;
     GameSystem *gsys = data->gsys;
 
     switch (*state) {
-    case 0:
+    case TRIAL_HOUSE_TEAM_SELECT_STEP_START_SELECT:
         GameEvent_ChainNext(event, EventBtlInstPokeSelect_Create(gsys, data->unk10, 0x17, data->regulationId,
                                                                  data->party, data->picked, &data->choice,
                                                                  &data->screenResult, data->work->party));
-        *state = 1;
+        *state = TRIAL_HOUSE_TEAM_SELECT_STEP_CHECK_RESULT;
         break;
-    case 1:
+    case TRIAL_HOUSE_TEAM_SELECT_STEP_CHECK_RESULT:
         if (data->battleBoxParty != NULL) {
             GFL_HeapFree(data->battleBoxParty);
         }
@@ -158,15 +163,20 @@ GameEvent *CallTrialHouseResults(GameSystem *gsys, u32 downloaded, u32 playJingl
     return event;
 }
 
+typedef enum {
+    TRIAL_HOUSE_RESULTS_STEP_START_AWARD,
+    TRIAL_HOUSE_RESULTS_STEP_DONE,
+} TrialHouseResultsStep;
+
 static GameEventReturnCode EventTrialHouseResults_Callback(GameEvent *event, u32 *state, void *work) {
     TrialHouseResultsData *data = GameEvent_GetData(event);
 
     switch (*state) {
-    case 0:
+    case TRIAL_HOUSE_RESULTS_STEP_START_AWARD:
         GSYS_QueueProcAsEvent(event, OVERLAY_TH_AWARD, &TH_AWARD_PROC_FUNCTIONS, &data->param);
         (*state)++;
         break;
-    case 1:
+    case TRIAL_HOUSE_RESULTS_STEP_DONE:
         return GAMEEVENT_DONE;
     }
     return GAMEEVENT_CONTINUE;
