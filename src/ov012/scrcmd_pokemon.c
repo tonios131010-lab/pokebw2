@@ -180,6 +180,12 @@ BOOL Scrcmd_Pokemon_PokePartyGetHappiness(VM *vm, FieldScriptEnv *env) {
     return FALSE;
 }
 
+typedef enum {
+    PARTY_HAPPINESS_SET,
+    PARTY_HAPPINESS_ADD,
+    PARTY_HAPPINESS_SUBTRACT,
+} PartyHappinessMode;
+
 BOOL Scrcmd_Pokemon_PokePartyAdjustHappiness(VM *vm, FieldScriptEnv *env) {
     u16 index = ScriptReadAny(vm, env);
     u16 delta = ScriptReadAny(vm, env);
@@ -195,21 +201,21 @@ BOOL Scrcmd_Pokemon_PokePartyAdjustHappiness(VM *vm, FieldScriptEnv *env) {
     }
     happiness = (u8)PokeParty_GetParam(pkm, PKM_PARAM_HAPPINESS, NULL);
     switch (mode) {
-    case 0:
+    case PARTY_HAPPINESS_SET:
         if (delta > 255) {
             happiness = 255;
         } else {
             happiness = (u8)delta;
         }
         break;
-    case 1:
+    case PARTY_HAPPINESS_ADD:
         if (happiness + delta > 255) {
             happiness = 255;
         } else {
             happiness += (u8)delta;
         }
         break;
-    case 2:
+    case PARTY_HAPPINESS_SUBTRACT:
         if (happiness < delta) {
             happiness = 0;
         } else {
@@ -240,6 +246,11 @@ BOOL Scrcmd_Pokemon_PokePartyGetForme(VM *vm, FieldScriptEnv *env) {
     return FALSE;
 }
 
+typedef enum {
+    PARTY_MEMBER_FIRST_EGG = 1,
+    PARTY_MEMBER_FIRST_BATTLE_READY = 2,
+} PartyMemberKind;
+
 BOOL Scrcmd_Pokemon_PokePartyGetMemberByType(VM *vm, FieldScriptEnv *env) {
     u16 *result = ScriptReadVar(vm, env);
     u16 kind = ScriptReadAny(vm, env);
@@ -247,10 +258,10 @@ BOOL Scrcmd_Pokemon_PokePartyGetMemberByType(VM *vm, FieldScriptEnv *env) {
     u16 index;
 
     switch (kind) {
-    case 2:
+    case PARTY_MEMBER_FIRST_BATTLE_READY:
         index = PokeParty_GetFirstBattleReady(party);
         break;
-    case 1:
+    case PARTY_MEMBER_FIRST_EGG:
         index = isEggInParty(party);
         break;
     default:
@@ -261,6 +272,15 @@ BOOL Scrcmd_Pokemon_PokePartyGetMemberByType(VM *vm, FieldScriptEnv *env) {
     return FALSE;
 }
 
+typedef enum {
+    PARTY_COUNT_ALL,
+    PARTY_COUNT_NOT_EGGS,
+    PARTY_COUNT_ABLE_TO_FIGHT,
+    PARTY_COUNT_EGGS,
+    PARTY_COUNT_SANITY_EGGS,
+    PARTY_COUNT_FREE_SLOTS,
+} PartyCountKind;
+
 BOOL Scrcmd_Pokemon_PokePartyGetCount(VM *vm, FieldScriptEnv *env) {
     u16 *result = ScriptReadVar(vm, env);
     u16 kind = ScriptReadAny(vm, env);
@@ -268,22 +288,22 @@ BOOL Scrcmd_Pokemon_PokePartyGetCount(VM *vm, FieldScriptEnv *env) {
     int count;
 
     switch (kind) {
-    case 0:
+    case PARTY_COUNT_ALL:
         count = PokeParty_GetPkmCount(party);
         break;
-    case 1:
+    case PARTY_COUNT_NOT_EGGS:
         count = howManyPartyPokesAreNotEggs(party);
         break;
-    case 2:
+    case PARTY_COUNT_ABLE_TO_FIGHT:
         count = howManyPokesAreAbleToFight(party);
         break;
-    case 3:
+    case PARTY_COUNT_EGGS:
         count = countAllEggsInParty(party);
         break;
-    case 4:
+    case PARTY_COUNT_SANITY_EGGS:
         count = countSanityEggsInParty(party);
         break;
-    case 5:
+    case PARTY_COUNT_FREE_SLOTS:
         count = PokeParty_GetCapacity(party);
         int partyCount = PokeParty_GetPkmCount(party);
         if (count < partyCount) {
@@ -325,6 +345,13 @@ BOOL Scrcmd_Pokemon_PokePartyGetCountBySpecies(VM *vm, FieldScriptEnv *env) {
     return FALSE;
 }
 
+typedef enum {
+    BOX_COUNT_ALL = 0,
+    BOX_COUNT_NORMAL = 1,
+    BOX_COUNT_ABNORMAL = 3,
+    BOX_COUNT_FREE_SLOTS = 5,
+} BoxCountKind;
+
 BOOL Scrcmd_Pokemon_BoxGetCount(VM *vm, FieldScriptEnv *env) {
     u16 *result = ScriptReadVar(vm, env);
     u16 kind = ScriptReadAny(vm, env);
@@ -334,17 +361,17 @@ BOOL Scrcmd_Pokemon_BoxGetCount(VM *vm, FieldScriptEnv *env) {
     int count;
 
     switch (kind) {
-    case 0:
+    case BOX_COUNT_ALL:
         count = howManyTotalPokesAreInBoxes(boxes);
         break;
-    case 1:
+    case BOX_COUNT_NORMAL:
     case 2:
         count = howManyNormalPokesAreInAllBoxes(boxes);
         break;
-    case 3:
+    case BOX_COUNT_ABNORMAL:
         count = howManyTotalPokesAreInBoxes(boxes) - howManyNormalPokesAreInAllBoxes(boxes);
         break;
-    case 5:
+    case BOX_COUNT_FREE_SLOTS:
         count = howManyTotalPokesAreInBoxes(boxes);
         if (count > 720) {
             count = 0;
