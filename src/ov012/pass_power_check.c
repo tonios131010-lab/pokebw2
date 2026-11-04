@@ -13,6 +13,8 @@ typedef enum {
 // The levels a pass power needs, or one of these
 #define PASS_POWER_LEVEL_NONE 0xff
 #define PASS_POWER_SPECIAL 0xfe
+// What PassPower_GetSPowerBaseID returns for a pass power without a special flag
+#define PASS_POWER_BASE_ID_NONE 0xff
 
 u32 CheckPassPowerUnlocked(PassPowerData *table, int index, PassPowerLevel *have, u8 *flags) {
     int level1 = table[index].level1;
@@ -24,7 +26,7 @@ u32 CheckPassPowerUnlocked(PassPowerData *table, int index, PassPowerLevel *have
     }
     if (level1 == PASS_POWER_SPECIAL) {
         bit = PassPower_GetSPowerBaseID(index);
-        if (bit == 0xff) {
+        if (bit == PASS_POWER_BASE_ID_NONE) {
             return PASS_POWER_LOCKED;
         }
         unlocked = flags[0] | (flags[1] << 8);
