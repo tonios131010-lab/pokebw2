@@ -27,6 +27,15 @@ typedef struct {
 
 static GameEventReturnCode EventPhraseSelect_Callback(GameEvent *event, u32 *state, void *data);
 
+typedef enum {
+    PHRASE_SELECT_MODE_CGEAR_PHRASE_1,
+    PHRASE_SELECT_MODE_CGEAR_PHRASE_2,
+    PHRASE_SELECT_MODE_CGEAR_PHRASE_3,
+    PHRASE_SELECT_MODE_CGEAR_PHRASE_4,
+    PHRASE_SELECT_MODE_WORD,
+    PHRASE_SELECT_MODE_TWO_WORDS,
+} PhraseSelectMode;
+
 BOOL Scrcmd_PhraseSelect_CallPhraseSelect(VM *vm, FieldScriptEnv *env) {
     GameSystem *gsys = FieldScriptEnv_GetGameSystem(env);
     GameData *gameData = FieldScriptEnv_GetGameData(env);
@@ -47,30 +56,30 @@ BOOL Scrcmd_PhraseSelect_CallPhraseSelect(VM *vm, FieldScriptEnv *env) {
     data->decided = decided;
     *decided = FALSE;
     switch (mode) {
-    case 0:
+    case PHRASE_SELECT_MODE_CGEAR_PHRASE_1:
         data->cgearIndex = 1;
         data->useCGear = TRUE;
         kind = 2;
         break;
-    case 1:
+    case PHRASE_SELECT_MODE_CGEAR_PHRASE_2:
         data->cgearIndex = 2;
         data->useCGear = TRUE;
         kind = 2;
         break;
-    case 2:
+    case PHRASE_SELECT_MODE_CGEAR_PHRASE_3:
         data->cgearIndex = 3;
         data->useCGear = TRUE;
         kind = 2;
         break;
-    case 3:
+    case PHRASE_SELECT_MODE_CGEAR_PHRASE_4:
         data->cgearIndex = 4;
         data->useCGear = TRUE;
         kind = 2;
         break;
-    case 4:
+    case PHRASE_SELECT_MODE_WORD:
         data->useCGear = FALSE;
         break;
-    case 5:
+    case PHRASE_SELECT_MODE_TWO_WORDS:
         data->useCGear = FALSE;
         kind = 1;
         break;
@@ -106,12 +115,12 @@ static GameEventReturnCode EventPhraseSelect_Callback(GameEvent *event, u32 *sta
     case 1:
         if (PMSIParam_IsCanceled(pms)) {
             *data->decided = FALSE;
-        } else if (data->mode == 5) {
+        } else if (data->mode == PHRASE_SELECT_MODE_TWO_WORDS) {
             PMSIParam_GetWords(pms, words);
             *data->result = words[0];
             *data->result2 = words[1];
             *data->decided = TRUE;
-        } else if (data->mode == 4) {
+        } else if (data->mode == PHRASE_SELECT_MODE_WORD) {
             *data->result = PMSIParam_GetWord(pms);
             *data->result2 = 0;
             *data->decided = TRUE;
