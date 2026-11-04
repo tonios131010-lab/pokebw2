@@ -53,15 +53,20 @@ BOOL FieldScriptSubEventFinish_NDemo(FinishScriptSubEventsWork *work, u32 *state
     return TRUE;
 }
 
+typedef enum {
+    NDEMO_END_STEP_FACE_UP_END,
+    NDEMO_END_STEP_FINISH,
+} NDemoEndStep;
+
 static GameEventReturnCode EventNDemoEnd_Callback(GameEvent *event, u32 *state, void *data) {
     GameSystem *gsys = GameEvent_GetGameSystem(event);
 
     switch (*state) {
-    case 0:
+    case NDEMO_END_STEP_FACE_UP_END:
         GameEvent_ChainNext(event, EventFaceUpEnd_Create(gsys));
         (*state)++;
         break;
-    case 1:
+    case NDEMO_END_STEP_FINISH:
         FieldScriptSubEvent_Unregister(SCRIPT_SUB_EVENT_NDEMO);
         GFL_OvlUnload(OVERLAY_ID(155));
         return GAMEEVENT_DONE;
