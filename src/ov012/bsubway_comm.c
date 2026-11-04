@@ -167,27 +167,35 @@ static void BSubwayComm_SetCommand7Data(BSubwayScrWork *bsw, u16 value) {
     *(u32 *)bsw->sendBuf = value;
 }
 
+typedef enum {
+    BSUBWAY_SEND_MEMBERS,
+    BSUBWAY_SEND_TRAINERS,
+    BSUBWAY_SEND_RETIRE,
+    BSUBWAY_SEND_PLAYER_INFO,
+    BSUBWAY_SEND_PLAY_MODE,
+} BSubwaySendMode;
+
 void BSubwayComm_SetSendData(BSubwayScrWork *bsw, u16 mode, u16 value) {
     GameData *gameData = bsw->gameData;
 
     switch (mode) {
-    case 0:
+    case BSUBWAY_SEND_MEMBERS:
         bsw->sendCommand = BSUBWAY_COMM_MEMBERS;
         BSubwayComm_SetMembersData(bsw, gameData);
         break;
-    case 1:
+    case BSUBWAY_SEND_TRAINERS:
         bsw->sendCommand = BSUBWAY_COMM_TRAINERS;
         BSubwayComm_SetTrainersData(bsw);
         break;
-    case 2:
+    case BSUBWAY_SEND_RETIRE:
         bsw->sendCommand = BSUBWAY_COMM_RETIRE;
         BSubwayComm_SetRetireData(bsw, value);
         break;
-    case 3:
+    case BSUBWAY_SEND_PLAYER_INFO:
         bsw->sendCommand = BSUBWAY_COMM_PLAYER_INFO;
         PlayerInfo_Copy(GetGameDataPlayerInfo(gameData), (PlayerInfo *)bsw->sendBuf);
         break;
-    case 4:
+    case BSUBWAY_SEND_PLAY_MODE:
         bsw->sendCommand = BSUBWAY_COMM_PLAY_MODE;
         BSubwayComm_SetPlayModeData(bsw);
         break;
