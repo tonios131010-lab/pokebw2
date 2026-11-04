@@ -346,6 +346,12 @@ GameEvent *EventFlash_Create(HiddenEventArgs *param, PlayerActionPossibilities *
     return event;
 }
 
+typedef enum {
+    HM_FLASH_STEP_START_SCRIPT,
+    HM_FLASH_STEP_LIGHT_UP,
+    HM_FLASH_STEP_WAIT_LIT,
+} HMFlashStep;
+
 GameEventReturnCode EventFlash_Callback(GameEvent *event, u32 *state, void *data) {
     HiddenEventData *work = data;
     GameData *gameData;
@@ -363,13 +369,13 @@ GameEventReturnCode EventFlash_Callback(GameEvent *event, u32 *state, void *data
     flash = FieldSkillMapEff_GetFlash(Field_GetSkillMapEff(GSYS_GetField(work->gsys)));
     heapId = Field_GetHeapID(GSYS_GetField(work->gsys));
     switch (*state) {
-    case 0:
+    case HM_FLASH_STEP_START_SCRIPT:
         param = work->args.partySlot;
         scriptWork = EventScriptCall_Start(event, 0x2718, NULL, 0, heapId);
         ScriptWork_SetParams(scriptWork, param, 0, 0, 0);
         ++*state;
         break;
-    case 1:
+    case HM_FLASH_STEP_LIGHT_UP:
         if (!FieldStatus_CheckFlashUsed(status)) {
             status2 = GameData_GetFieldStatus(gameData);
             FieldStatus_SetFlashUsed(status, TRUE);
@@ -384,7 +390,7 @@ GameEventReturnCode EventFlash_Callback(GameEvent *event, u32 *state, void *data
         }
         ++*state;
         break;
-    case 2:
+    case HM_FLASH_STEP_WAIT_LIT:
         if (FieldFlash_GetState(flash) == FIELD_FLASH_STATE_LIT)
             return GAMEEVENT_DONE;
         break;
@@ -411,19 +417,24 @@ GameEvent *EventDigCall_Create(HiddenEventArgs *param, PlayerActionPossibilities
     return event;
 }
 
+typedef enum {
+    HM_DIG_STEP_START_SCRIPT,
+    HM_DIG_STEP_CHANGE_MAP,
+} HMDigStep;
+
 GameEventReturnCode EventDigCall_Callback(GameEvent *event, u32 *state, void *data) {
     HiddenEventData *work = data;
     ScriptWork *scriptWork;
     u16 param;
 
     switch (*state) {
-    case 0:
+    case HM_DIG_STEP_START_SCRIPT:
         param = work->args.partySlot;
         scriptWork = EventScriptCall_Start(event, 0x271a, NULL, 0, 0x15);
         ScriptWork_SetParams(scriptWork, param, 0, 0, 0);
         ++*state;
         break;
-    case 1:
+    case HM_DIG_STEP_CHANGE_MAP:
         GameEvent_Replace(event, EventMapChangeDig_Create(work->gsys));
         break;
     }
@@ -449,19 +460,24 @@ GameEvent *EventTeleportCall_Create(HiddenEventArgs *param, PlayerActionPossibil
     return event;
 }
 
+typedef enum {
+    HM_TELEPORT_STEP_START_SCRIPT,
+    HM_TELEPORT_STEP_CHANGE_MAP,
+} HMTeleportStep;
+
 GameEventReturnCode EventTeleportCall_Callback(GameEvent *event, u32 *state, void *data) {
     HiddenEventData *work = data;
     ScriptWork *scriptWork;
     u16 param;
 
     switch (*state) {
-    case 0:
+    case HM_TELEPORT_STEP_START_SCRIPT:
         param = work->args.partySlot;
         scriptWork = EventScriptCall_Start(event, 0x2719, NULL, 0, 0x15);
         ScriptWork_SetParams(scriptWork, param, 0, 0, 0);
         ++*state;
         break;
-    case 1:
+    case HM_TELEPORT_STEP_CHANGE_MAP:
         GameEvent_Replace(event, EventMapChangeTeleport_Create(work->gsys));
         break;
     }
@@ -512,6 +528,11 @@ GameEvent *EventChatterCall_Create(HiddenEventArgs *args, PlayerActionPossibilit
     return EventPerapRecord_Create(context->gsys, context->field, args->partySlot);
 }
 
+typedef enum {
+    HM_RUINS_STRENGTH_STEP_START_SCRIPT,
+    HM_RUINS_STRENGTH_STEP_REPLACE_SCRIPT,
+} HMRuinsStrengthStep;
+
 GameEventReturnCode EventRuinsStrengthCall_Callback(GameEvent *event, u32 *state, void *data) {
     HiddenEventData *work = data;
     ScriptWork *scriptWork;
@@ -521,13 +542,13 @@ GameEventReturnCode EventRuinsStrengthCall_Callback(GameEvent *event, u32 *state
     GameData_GetEventWork(GSYS_GetGameData(work->gsys));
     heapId = Field_GetHeapID(GSYS_GetField(work->gsys));
     switch (*state) {
-    case 0:
+    case HM_RUINS_STRENGTH_STEP_START_SCRIPT:
         param = work->args.partySlot;
         scriptWork = EventScriptCall_Start(event, 0x271e, NULL, 0, heapId);
         ScriptWork_SetParams(scriptWork, param, 0, 0, 0);
         ++*state;
         break;
-    case 1:
+    case HM_RUINS_STRENGTH_STEP_REPLACE_SCRIPT:
         EventScriptCall_Replace(event, 0x28ed, 0, 0);
         break;
     }
@@ -543,6 +564,11 @@ GameEvent *EventRuinsStrengthCall_Create(HiddenEventArgs *param, PlayerActionPos
     return event;
 }
 
+typedef enum {
+    HM_RUINS_FLASH_STEP_START_SCRIPT,
+    HM_RUINS_FLASH_STEP_REPLACE_SCRIPT,
+} HMRuinsFlashStep;
+
 GameEventReturnCode EventRuinsFlash_Callback(GameEvent *event, u32 *state, void *data) {
     HiddenEventData *work = data;
     ScriptWork *scriptWork;
@@ -552,13 +578,13 @@ GameEventReturnCode EventRuinsFlash_Callback(GameEvent *event, u32 *state, void 
     GameData_GetEventWork(GSYS_GetGameData(work->gsys));
     heapId = Field_GetHeapID(GSYS_GetField(work->gsys));
     switch (*state) {
-    case 0:
+    case HM_RUINS_FLASH_STEP_START_SCRIPT:
         param = work->args.partySlot;
         scriptWork = EventScriptCall_Start(event, 0x271d, NULL, 0, heapId);
         ScriptWork_SetParams(scriptWork, param, 0, 0, 0);
         ++*state;
         break;
-    case 1:
+    case HM_RUINS_FLASH_STEP_REPLACE_SCRIPT:
         EventScriptCall_Replace(event, 0x28ec, 0, 0);
         break;
     }
