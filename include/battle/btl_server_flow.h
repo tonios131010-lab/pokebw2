@@ -585,13 +585,13 @@ static inline BOOL BtlFlow_IsMonAlive(BattleMon *mon) {
     return FALSE;
 }
 
-// The ID of the mon that a mon carries off with Sky Drop, 0x1f for none
+// The ID of the mon that a mon carries off with Sky Drop, BTL_MON_ID_NONE for none
 static inline u8 BtlFlow_GetSkyDropTarget(BattleMon *mon) {
     u8 targetId;
     u8 counter = GetConditionCount(mon, 4);
 
     if (counter == 0 || (targetId = counter - 1) >= 0x18) {
-        targetId = 0x1f;
+        targetId = BTL_MON_ID_NONE;
     }
     return targetId;
 }

@@ -1644,7 +1644,7 @@ void ServerControl_Fight(BtlServerFlow *flow, BattleMon *mon, BattleAction *acti
         BtlMonSet_RemoveFainted(flow->targets);
         BtlMonSet_CopyNotFainted(flow->targets, flow->liveTargets);
         BtlMonSet_SetNumTargets(flow->liveTargets, targetCount);
-        if (!moveLocked && !charging && moveSlot != 4) {
+        if (!moveLocked && !charging && moveSlot != BTL_MOVE_SLOT_NONE) {
             ServerControl_ConsumePP(flow, mon, move, moveSlot, flow->targets);
             usedMove = TRUE;
         }
@@ -1685,7 +1685,7 @@ void ServerControl_Fight(BtlServerFlow *flow, BattleMon *mon, BattleAction *acti
     } else if (GetConditionCount(mon, 3)) {
         ServerControl_SetMonCounter(flow, mon, 3, 0);
     }
-    if (prevStatus != 0x10 && BattleMon_GetSemiInvulnFlag(mon) != 0x10) {
+    if (prevStatus != BTL_SEMI_INVULN_NONE && BattleMon_GetSemiInvulnFlag(mon) != BTL_SEMI_INVULN_NONE) {
         ServerControl_ClearChargeState(flow, mon);
     }
     if (GetTurnFlag(mon, 0xb)) {
@@ -1974,8 +1974,8 @@ BOOL ServerControl_CheckMoveSteal(BtlServerFlow *flow, BattleMon *mon, u16 move,
     monId = 0x1f;
     target = 0x1f;
     ServerEvent_CheckMoveSteal(flow, mon, move, targets, &monId, &target);
-    if (monId != 0x1f) {
-        list->targets[0] = target != 0x1f ? GetBattlePos(&flow->posPoke, target) : 6;
+    if (monId != BTL_MON_ID_NONE) {
+        list->targets[0] = target != BTL_MON_ID_NONE ? GetBattlePos(&flow->posPoke, target) : BTL_POS_NONE;
         list->monIds[0] = monId;
         list->count = 1;
         return TRUE;
@@ -2002,7 +2002,7 @@ BOOL ServerEvent_CheckMoveSteal(BtlServerFlow *flow, BattleMon *mon, u16 move, B
     *monId = BattleEventVar_GetValue(BTL_EVAR_MON);
     *target = BattleEventVar_GetValue(BTL_EVAR_DEFENDER);
     BattleEventVar_Pop(0x104b);
-    if (*monId != 0x1f) {
+    if (*monId != BTL_MON_ID_NONE) {
         return TRUE;
     }
     return FALSE;
@@ -2559,7 +2559,7 @@ BOOL ServerControl_StartChargeTurn(BtlServerFlow *flow, BattleMon *mon, u8 pos, 
         if (IsSemiInvulnMove(mon)) {
             BtlServerCmdQueue_Put(flow->queue, SC_SET_MON_VISIBLE, GetMonID(mon), 1);
         }
-        if (id != 0x1f) {
+        if (id != BTL_MON_ID_NONE) {
             BtlServerCmdQueue_Put(flow->queue, SC_SET_MON_VISIBLE, id, 1);
         }
     } else if (!failed) {
@@ -2574,7 +2574,7 @@ void ServerControl_ClearChargeState(BtlServerFlow *flow, BattleMon *mon) {
         ServerControl_CureCondition(flow, mon, CONDITION_CHARGE, 0);
         BattleMon_SetTurnFlag(mon, 0xb);
     }
-    while ((flag = BattleMon_GetSemiInvulnFlag(mon)) != 0x10) {
+    while ((flag = BattleMon_GetSemiInvulnFlag(mon)) != BTL_SEMI_INVULN_NONE) {
         scPut_ResetContFlag(flow, mon, flag);
     }
 }
@@ -2602,7 +2602,7 @@ BOOL ServerControl_SkyDropCatch(BtlServerFlow *flow, BattleMon *attacker, Battle
 void ServerControl_SkyDropCheckRelease(BtlServerFlow *flow, BattleMon *mon, BOOL flag) {
     u8 targetId = BtlFlow_GetSkyDropTarget(mon);
 
-    if (targetId != 0x1f) {
+    if (targetId != BTL_MON_ID_NONE) {
         BattleMon *target = GetPokeParam(flow->pokeCon, targetId);
         if (CheckCondition(target, CONDITION_SKY_DROP)) {
             ServerControl_CureCondition(flow, target, CONDITION_SKY_DROP, 0);
@@ -2647,7 +2647,7 @@ BOOL ServerControl_CheckMoveFail(BtlServerFlow *flow, BattleMon *mon, u16 move, 
         }
         if (!flag) {
             u8 slot = BattleMon_FindMoveSlot(mon, move);
-            if (slot != 4 && GetMovePP(mon, slot) == 0) {
+            if (slot != BTL_MOVE_SLOT_NONE && GetMovePP(mon, slot) == 0) {
                 cause = 1;
                 break;
             }
@@ -4583,7 +4583,7 @@ BOOL ServerControl_ForceSwitchCore(BtlServerFlow *flow, BattleMon *attacker, Bat
     if (CheckCondition(target, CONDITION_SKY_DROP)) {
         return FALSE;
     }
-    if (BtlFlow_GetSkyDropTarget(target) != 0x1f) {
+    if (BtlFlow_GetSkyDropTarget(target) != BTL_MON_ID_NONE) {
         return FALSE;
     }
     state = PushState(&flow->actionState, 0x222c);
@@ -4746,7 +4746,7 @@ BOOL ServerControl_FieldEffectCore(BtlServerFlow *flow, u32 effect, BattleCondit
     }
     if (dependPoke) {
         u8 monId = Condition_GetMonID(value);
-        if (monId != 0x1f) {
+        if (monId != BTL_MON_ID_NONE) {
             FieldStatusAddDependPoke(effect, monId);
             BtlServerCmdQueue_Put(flow->queue, SC_OP_ADD_FIELD_EFFECT_DEPEND_MON, (u8)effect, monId);
             return TRUE;
@@ -4994,18 +4994,28 @@ void StoreBattleMonsSpeedOrder(BtlServerFlow *flow, BtlMonSet *monSet) {
     SortBySpeed(monSet, flow);
 }
 
+enum {
+    TURN_CHECK_SEQ_INIT,
+    TURN_CHECK_SEQ_WEATHER,
+    TURN_CHECK_SEQ_BEGIN_EVENT,
+    TURN_CHECK_SEQ_CONDITIONS,
+    TURN_CHECK_SEQ_FIELD_EFFECTS,
+    TURN_CHECK_SEQ_END_EVENT,
+    TURN_CHECK_SEQ_FINISH,
+};
+
 BOOL ServerControl_TurnCheck(BtlServerFlow *flow) {
     BtlMonSet *monSet = flow->liveTargets;
     BOOL result = FALSE;
     BattleMon *mon;
 
-    if (flow->turnCheckSeq == 0) {
+    if (flow->turnCheckSeq == TURN_CHECK_SEQ_INIT) {
         StoreBattleMonsSpeedOrder(flow, monSet);
-        flow->turnCheckSeq = 1;
+        flow->turnCheckSeq = TURN_CHECK_SEQ_WEATHER;
         ServerControl_CommPlayerSupportHeal(flow);
     }
     switch (flow->turnCheckSeq) {
-    case 1:
+    case TURN_CHECK_SEQ_WEATHER:
         flow->turnCheckSeq++;
         BtlServerCmdQueue_Put(flow->queue, SC_HIDE_MSG_WINDOW, 0);
         result = FALSE;
@@ -5016,7 +5026,7 @@ BOOL ServerControl_TurnCheck(BtlServerFlow *flow) {
         if (ServerControl_CheckMatchup(flow)) {
             return result;
         }
-    case 2:
+    case TURN_CHECK_SEQ_BEGIN_EVENT:
         flow->turnCheckSeq++;
         if (ServerControl_TurnCheckEvent(flow, monSet, BTL_EVENT_TURN_CHECK_BEGIN)) {
             result = TRUE;
@@ -5025,7 +5035,7 @@ BOOL ServerControl_TurnCheck(BtlServerFlow *flow) {
         if (ServerControl_CheckMatchup(flow)) {
             return FALSE;
         }
-    case 3:
+    case TURN_CHECK_SEQ_CONDITIONS:
         flow->turnCheckSeq++;
         if (ServerControl_TurnCheckConditions(flow, monSet)) {
             result = TRUE;
@@ -5034,11 +5044,11 @@ BOOL ServerControl_TurnCheck(BtlServerFlow *flow) {
         if (ServerControl_CheckMatchup(flow)) {
             return FALSE;
         }
-    case 4:
+    case TURN_CHECK_SEQ_FIELD_EFFECTS:
         flow->turnCheckSeq++;
         ServerControl_TurnCheckSideEffects(flow);
         ServerControl_TurnCheckFieldEffects(flow);
-    case 5:
+    case TURN_CHECK_SEQ_END_EVENT:
         flow->turnCheckSeq++;
         if (ServerControl_TurnCheckEvent(flow, monSet, BTL_EVENT_TURN_CHECK_END)) {
             result = TRUE;
@@ -5047,7 +5057,7 @@ BOOL ServerControl_TurnCheck(BtlServerFlow *flow) {
         if (ServerControl_CheckMatchup(flow)) {
             return FALSE;
         }
-    case 6:
+    case TURN_CHECK_SEQ_FINISH:
         ServerControl_TurnCheckEvent(flow, monSet, BTL_EVENT_TURN_CHECK_DONE);
         flow->turnCheckSeq++;
         BtlMonSet_ResetIndex(monSet);
@@ -5061,7 +5071,7 @@ BOOL ServerControl_TurnCheck(BtlServerFlow *flow) {
         if (flow->turnCount < 0x270f) {
             flow->turnCount++;
         }
-        flow->turnCheckSeq = 0;
+        flow->turnCheckSeq = TURN_CHECK_SEQ_INIT;
         flow->simulationDepth = 0;
         return FALSE;
     }
@@ -5469,7 +5479,7 @@ u32 GetEnemyMaxLevel(BtlServerFlow *flow) {
     for (pos = 0; pos <= posMax; pos++) {
         if (!IsAllyClientID(playerClient, GetClientIDFromPos(flow->mainModule, pos))) {
             u8 monId = GetExistPokeID(&flow->posPoke, pos);
-            if (monId != 0x1f) {
+            if (monId != BTL_MON_ID_NONE) {
                 u32 level = GetBattleMonStat(GetPokeParam(flow->pokeCon, monId), BATTLEMON_LEVEL);
                 if (level > maxLevel) {
                     maxLevel = level;
@@ -6390,7 +6400,7 @@ BOOL ServerEvent_CheckSemiInvulnAvoid(BtlServerFlow *flow, BattleMon *mon, Battl
     u32 status;
 
     status = BattleMon_GetSemiInvulnFlag(target);
-    if (status != 0x10) {
+    if (status != BTL_SEMI_INVULN_NONE) {
         BattleEventVar_Push(0x2e14);
         BattleEventVar_SetConstValue(BTL_EVAR_ATTACKER, GetMonID(mon));
         BattleEventVar_SetConstValue(BTL_EVAR_DEFENDER, GetMonID(target));
@@ -6719,38 +6729,45 @@ u32 ServerEvent_CheckTypeEffectiveness(BtlServerFlow *flow, BattleMon *attacker,
     return effectiveness;
 }
 
+// How many positions an effect is shown on
+enum {
+    VIEW_EFFECT_ANYWHERE,
+    VIEW_EFFECT_ON_POS,
+    VIEW_EFFECT_BETWEEN_POS,
+};
+
 void ServerControl_ViewEffect(BtlServerFlow *flow, u16 effect, u8 pos1, u8 pos2, BOOL reserved, u32 reserve) {
     u32 posCount;
 
     if (pos2 != BTL_POS_NONE) {
-        posCount = 2;
+        posCount = VIEW_EFFECT_BETWEEN_POS;
     } else {
-        posCount = 1;
+        posCount = VIEW_EFFECT_ON_POS;
         if (pos1 == BTL_POS_NONE) {
-            posCount = 0;
+            posCount = VIEW_EFFECT_ANYWHERE;
         }
     }
     if (reserved) {
         switch (posCount) {
-        case 0:
+        case VIEW_EFFECT_ANYWHERE:
             BtlServerCmdQueue_PutReserved(flow->queue, (u16)reserve, SC_EFFECT, effect);
             break;
-        case 1:
+        case VIEW_EFFECT_ON_POS:
             BtlServerCmdQueue_PutReserved(flow->queue, (u16)reserve, SC_EFFECT_BY_POS, pos1, effect);
             break;
-        case 2:
+        case VIEW_EFFECT_BETWEEN_POS:
             BtlServerCmdQueue_PutReserved(flow->queue, (u16)reserve, SC_EFFECT_BETWEEN_POS, pos1, pos2, effect);
             break;
         }
     } else {
         switch (posCount) {
-        case 0:
+        case VIEW_EFFECT_ANYWHERE:
             BtlServerCmdQueue_Put(flow->queue, SC_EFFECT, effect);
             break;
-        case 1:
+        case VIEW_EFFECT_ON_POS:
             BtlServerCmdQueue_Put(flow->queue, SC_EFFECT_BY_POS, pos1, effect);
             break;
-        case 2:
+        case VIEW_EFFECT_BETWEEN_POS:
             BtlServerCmdQueue_Put(flow->queue, SC_EFFECT_BETWEEN_POS, pos1, pos2, effect);
             break;
         }
@@ -6852,7 +6869,7 @@ u16 ServerEvent_GetAttackPower(BtlServerFlow *flow, BattleMon *attacker, BattleM
     BattleEvent_CallHandlers(flow, BTL_EVENT_DECIDE_ATTACK_STAT);
     // Foul Play attacks with the target's stat
     monId = BattleEventVar_GetValue(BTL_EVAR_ATTACK_STAT_MON);
-    if (monId != 0x1f) {
+    if (monId != BTL_MON_ID_NONE) {
         attacker = GetPokeParam(flow->pokeCon, monId);
     }
     if (BattleEventVar_GetValue(BTL_EVAR_FLAG)) {
@@ -7611,7 +7628,7 @@ BOOL BtlServerFlow_IsSemiInvuln(BtlServerFlow *flow, u8 monId) {
 
 // Whether a mon is carrying another off with Sky Drop
 BOOL BtlServerFlow_IsSkyDropAttacker(BtlServerFlow *flow, u8 monId) {
-    if (BtlFlow_GetSkyDropTarget(GetPokeParam(flow->pokeCon, monId)) != 0x1f) {
+    if (BtlFlow_GetSkyDropTarget(GetPokeParam(flow->pokeCon, monId)) != BTL_MON_ID_NONE) {
         return TRUE;
     }
     return FALSE;
@@ -8128,7 +8145,7 @@ u8 BattleHandler_Drain(BtlServerFlow *handler, BattleHandlerDrainParam *param, u
     BattleMon *mon;
 
     source = NULL;
-    if (param->sourceIndex != 0x1f) {
+    if (param->sourceIndex != BTL_MON_ID_NONE) {
         source = GetPokeParam(handler->pokeCon, param->sourceIndex);
     }
     if (DoesBattleMonExist(&handler->posPoke, param->monIndex)) {
@@ -8153,7 +8170,7 @@ u8 BattleHandler_Damage(BtlServerFlow *handler, BattleHandlerDamageParam *param)
     if (DoesBattleMonExist(&handler->posPoke, param->targetIndex)) {
         mon = GetPokeParam(handler->pokeCon, param->targetIndex);
         source = NULL;
-        if (param->sourceIndex != 0x1f) {
+        if (param->sourceIndex != BTL_MON_ID_NONE) {
             source = GetPokeParam(handler->pokeCon, param->sourceIndex);
         }
         if (!IsFainted(mon)) {
@@ -8285,7 +8302,7 @@ u8 BattleHandler_AddCondition(BtlServerFlow *handler, const BattleHandlerAddCond
     u8 showMessage;
     BattleMon *target;
 
-    mon = param->monIndex != 0x1f ? GetPokeParam(handler->pokeCon, param->monIndex) : NULL;
+    mon = param->monIndex != BTL_MON_ID_NONE ? GetPokeParam(handler->pokeCon, param->monIndex) : NULL;
     showMessage = !BattleHandler_StrIsEnabled(&param->string) && !param->noMessage ? TRUE : FALSE;
     if (DoesBattleMonExist(&handler->posPoke, param->targetIndex)) {
         target = GetPokeParam(handler->pokeCon, param->targetIndex);
@@ -8470,7 +8487,7 @@ u8 BattleHandler_Message(BtlServerFlow *handler, BattleHandlerMessageParam *para
     BattleMon *mon;
 
     mon = NULL;
-    if (param->monIndex != 0x1f) {
+    if (param->monIndex != BTL_MON_ID_NONE) {
         mon = GetPokeParam(handler->pokeCon, param->monIndex);
     }
     if (param->popup && mon != NULL) {
