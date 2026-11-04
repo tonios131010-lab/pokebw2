@@ -97,6 +97,17 @@ void KeySystemFlow_Exit(KeySystemWork *wk) {
     }
 }
 
+enum {
+    GAME_CLEAR_SEQ_START_SCENE,
+    GAME_CLEAR_SEQ_FADE_IN,
+    GAME_CLEAR_SEQ_START_ANIM,
+    GAME_CLEAR_SEQ_WAIT_ANIM,
+    GAME_CLEAR_SEQ_UNLOCK_KEY,
+    GAME_CLEAR_SEQ_FADE_OUT,
+    GAME_CLEAR_SEQ_END_SCENE,
+    GAME_CLEAR_SEQ_END,
+};
+
 void KeySystemFlow_SeqGameClear(KeySystemSeq *seq, int *state, void *work) {
     KeySystemWork *wk = work;
     StrBuf *str;
@@ -104,16 +115,16 @@ void KeySystemFlow_SeqGameClear(KeySystemSeq *seq, int *state, void *work) {
     u16 msgId;
 
     switch (*state) {
-    case 0:
+    case GAME_CLEAR_SEQ_START_SCENE:
         KeySystem_CreateMsgWin(wk, HEAPID_KEY_SYSTEM);
         KeySystemSeq_Push(seq, KeySystemFlow_SeqStartKeyAnimScene);
         (*state)++;
         break;
-    case 1:
+    case GAME_CLEAR_SEQ_FADE_IN:
         KeySystemSeq_Push(seq, KeySystem_SeqFadeIn);
         (*state)++;
         break;
-    case 2:
+    case GAME_CLEAR_SEQ_START_ANIM:
         enabled = FALSE;
         msgId = sKeyNameMsgs[VERSION_INDEX][wk->param->key];
         str = GFL_MsgDataLoadStrbufNew(wk->msgData, sKeyUnlockedMsgs[VERSION_INDEX][wk->param->key]);
@@ -128,42 +139,50 @@ void KeySystemFlow_SeqGameClear(KeySystemSeq *seq, int *state, void *work) {
         GFL_StrBufFree(str);
         (*state)++;
         break;
-    case 3:
+    case GAME_CLEAR_SEQ_WAIT_ANIM:
         if (KeySystemKeyAnim_Update(&wk->keyAnim)) {
             (*state)++;
         }
         break;
-    case 4:
+    case GAME_CLEAR_SEQ_UNLOCK_KEY:
         KeyInfo_UnlockKey(wk->keyInfo, wk->param->key);
         if (wk->param->key != KEY_SYSTEM_KEY_CITY) {
             KeyInfo_EnableKey(wk->keyInfo, wk->param->key);
         }
         (*state)++;
         break;
-    case 5:
+    case GAME_CLEAR_SEQ_FADE_OUT:
         KeySystemSeq_Push(seq, KeySystem_SeqFadeOut);
         (*state)++;
         break;
-    case 6:
+    case GAME_CLEAR_SEQ_END_SCENE:
         KeySystemSeq_Push(seq, KeySystem_SeqEndScene);
         KeySystem_FreeMsgWin(wk);
         (*state)++;
         break;
-    case 7:
+    case GAME_CLEAR_SEQ_END:
         KeySystemSeq_Pop(seq);
         break;
     }
 }
 
+enum {
+    MENU_SEQ_START_SCENE,
+    MENU_SEQ_WAIT_CHOICE,
+    MENU_SEQ_END_SCENE,
+    MENU_SEQ_RUN_CHOICE,
+    MENU_SEQ_END,
+};
+
 void KeySystemFlow_SeqMenu(KeySystemSeq *seq, int *state, void *work) {
     KeySystemWork *wk = work;
 
     switch (*state) {
-    case 0:
+    case MENU_SEQ_START_SCENE:
         KeySystemSeq_Push(seq, KeySystemFlow_SeqStartMenuScene);
         (*state)++;
         break;
-    case 1:
+    case MENU_SEQ_WAIT_CHOICE:
         KeySystemList_Update(wk->list);
         if (KeySystemList_IsChanged(wk->list) && KeySystemMsgWin_IsDone(wk->infoWin)) {
             KeySystemMsgWin_PrintMsg(wk->infoWin, wk->msgData, KeySystemList_GetCursor(wk->list) + 18,
@@ -177,11 +196,11 @@ void KeySystemFlow_SeqMenu(KeySystemSeq *seq, int *state, void *work) {
             (*state)++;
         }
         break;
-    case 2:
+    case MENU_SEQ_END_SCENE:
         KeySystemSeq_Push(seq, KeySystem_SeqEndScene);
         (*state)++;
         break;
-    case 3:
+    case MENU_SEQ_RUN_CHOICE:
         switch (wk->choice) {
         case KEY_MENU_EXCHANGE:
             if (isWirelessEnabled()) {
@@ -189,51 +208,80 @@ void KeySystemFlow_SeqMenu(KeySystemSeq *seq, int *state, void *work) {
             } else {
                 KeySystemSeq_Push(seq, KeySystem_SeqWirelessOff);
             }
-            *state = 0;
+            *state = MENU_SEQ_START_SCENE;
             break;
         case KEY_MENU_SETTINGS:
             KeySystemSeq_Push(seq, KeySystemFlow_SeqSettings);
-            *state = 0;
+            *state = MENU_SEQ_START_SCENE;
             break;
         case KEY_MENU_BACK:
             (*state)++;
             break;
         }
         break;
-    case 4:
+    case MENU_SEQ_END:
         KeySystemBG_StartFade(wk->bg, KEY_SYSTEM_BG_FADE_0_TO_1, 30);
         KeySystemSeq_Pop(seq);
         break;
     }
 }
 
+enum {
+    EXCHANGE_SEQ_START_SCENE,
+    EXCHANGE_SEQ_PRINT_PROMPT,
+    EXCHANGE_SEQ_WAIT_PROMPT_PRINT,
+    EXCHANGE_SEQ_WAIT_MENU_PRINT,
+    EXCHANGE_SEQ_WAIT_ANSWER,
+    EXCHANGE_SEQ_START_RETRY_SCENE,
+    EXCHANGE_SEQ_PRINT_RETRY_PROMPT,
+    EXCHANGE_SEQ_START_CONNECT_SCENE,
+    EXCHANGE_SEQ_REQUEST_CONNECT,
+    EXCHANGE_SEQ_WAIT_CONNECT,
+    EXCHANGE_SEQ_WAIT_CANCEL,
+    EXCHANGE_SEQ_END_SCENE_RETRY,
+    EXCHANGE_SEQ_END_SCENE_CANCELED,
+    EXCHANGE_SEQ_SEND_SAVE_INFO,
+    EXCHANGE_SEQ_WAIT_SAVE_INFO,
+    EXCHANGE_SEQ_SEND_KEYS,
+    EXCHANGE_SEQ_WAIT_KEYS,
+    EXCHANGE_SEQ_END_CONNECT_SCENE,
+    EXCHANGE_SEQ_FIRST_TRANSFER,
+    EXCHANGE_SEQ_SECOND_TRANSFER,
+    EXCHANGE_SEQ_DISCONNECT,
+    EXCHANGE_SEQ_WAIT_DISCONNECT,
+    EXCHANGE_SEQ_MERGE_KEYS,
+    EXCHANGE_SEQ_PRINT_DONE,
+    EXCHANGE_SEQ_WAIT_DONE_PRINT,
+    EXCHANGE_SEQ_END,
+};
+
 static void KeySystemFlow_SeqExchange(KeySystemSeq *seq, int *state, void *work) {
     KeySystemWork *wk = work;
     s32 result;
 
     switch (*state) {
-    case 0:
+    case EXCHANGE_SEQ_START_SCENE:
         KeySystem_CreateMsgWin(wk, HEAPID_KEY_SYSTEM);
         KeySystemSeq_Push(seq, KeySystemFlow_SeqStartKeysHeldScene);
         (*state)++;
         break;
-    case 1:
+    case EXCHANGE_SEQ_PRINT_PROMPT:
         KeySystemMsgWin_PrintMsg(wk->msgWin, wk->msgData, 67, KEY_SYSTEM_MSG_STREAM);
         (*state)++;
         break;
-    case 2:
+    case EXCHANGE_SEQ_WAIT_PROMPT_PRINT:
         if (KeySystemMsgWin_IsDone(wk->msgWin)) {
             KeySystem_CreateYesNoMenu(wk, HEAPID_KEY_SYSTEM);
             (*state)++;
         }
         break;
-    case 3:
+    case EXCHANGE_SEQ_WAIT_MENU_PRINT:
         if (KeySystemMenu_UpdatePrint(wk->menu)) {
             GFL_BGSysQueueScrLoad(0);
             (*state)++;
         }
         break;
-    case 4:
+    case EXCHANGE_SEQ_WAIT_ANSWER:
         result = KeySystemMenu_Update(wk->menu);
         if (result == BMPMENULIST_NULL) {
             break;
@@ -241,29 +289,29 @@ static void KeySystemFlow_SeqExchange(KeySystemSeq *seq, int *state, void *work)
         KeySystemSeq_Push(seq, KeySystem_SeqEndScene);
         KeySystem_FreeMenu(wk);
         switch (result) {
-        case 0:
-            *state = 7;
+        case KEY_SYSTEM_YES_NO_YES:
+            *state = EXCHANGE_SEQ_START_CONNECT_SCENE;
             break;
-        case 1:
+        case KEY_SYSTEM_YES_NO_NO:
         default:
             KeySystemMsgWinGroup_Free(wk->msgWinGroup);
             wk->msgWinGroup = NULL;
             GFL_BGSysClearScr(6);
             GFL_BGSysQueueScrLoad(6);
             GFL_BGSysQueueScrLoad(4);
-            *state = 25;
+            *state = EXCHANGE_SEQ_END;
             break;
         }
         break;
-    case 5:
+    case EXCHANGE_SEQ_START_RETRY_SCENE:
         KeySystemSeq_Push(seq, KeySystemFlow_SeqStartKeysHeldScene);
         (*state)++;
         break;
-    case 6:
+    case EXCHANGE_SEQ_PRINT_RETRY_PROMPT:
         KeySystemMsgWin_PrintMsg(wk->msgWin, wk->msgData, 111, KEY_SYSTEM_MSG_STREAM);
-        *state = 2;
+        *state = EXCHANGE_SEQ_WAIT_PROMPT_PRINT;
         break;
-    case 7:
+    case EXCHANGE_SEQ_START_CONNECT_SCENE:
         wk->choice = 0;
         wk->noCancel = FALSE;
         KeySystemSeq_Push(seq, KeySystemFlow_SeqStartConnectScene);
@@ -272,7 +320,7 @@ static void KeySystemFlow_SeqExchange(KeySystemSeq *seq, int *state, void *work)
         GFL_SndSEPlay(SEQ_SE_SW_KEYSYS_01);
         (*state)++;
         break;
-    case 8: {
+    case EXCHANGE_SEQ_REQUEST_CONNECT: {
         KeySystemNetCallback callback;
 
         MI_CpuFill8(&callback, 0, sizeof(KeySystemNetCallback));
@@ -283,7 +331,7 @@ static void KeySystemFlow_SeqExchange(KeySystemSeq *seq, int *state, void *work)
         (*state)++;
         break;
     }
-    case 9:
+    case EXCHANGE_SEQ_WAIT_CONNECT:
         if (wk->choice) {
             ClActor *actor0 = KeySystemClAct_GetActor(&wk->clact, 0);
             ClActor *actor1 = KeySystemClAct_GetActor(&wk->clact, 1);
@@ -303,29 +351,29 @@ static void KeySystemFlow_SeqExchange(KeySystemSeq *seq, int *state, void *work)
         }
         if (KeySystemNet_GetState(wk->net) == KEY_SYSTEM_NET_STATE_CONNECTED) {
             wk->isParent = GFL_NetIsParent();
-            *state = 13;
+            *state = EXCHANGE_SEQ_SEND_SAVE_INFO;
         } else if (KeySystemNet_GetState(wk->net) == KEY_SYSTEM_NET_STATE_IDLE) {
             GFL_SndStop();
-            *state = 11;
+            *state = EXCHANGE_SEQ_END_SCENE_RETRY;
         } else if (KeySystemNet_GetState(wk->net) == KEY_SYSTEM_NET_STATE_CANCELING) {
             GFL_SndStop();
-            *state = 10;
+            *state = EXCHANGE_SEQ_WAIT_CANCEL;
         }
         break;
-    case 10:
+    case EXCHANGE_SEQ_WAIT_CANCEL:
         if (KeySystemNet_GetState(wk->net) == KEY_SYSTEM_NET_STATE_IDLE) {
-            *state = 12;
+            *state = EXCHANGE_SEQ_END_SCENE_CANCELED;
         }
         break;
-    case 11:
+    case EXCHANGE_SEQ_END_SCENE_RETRY:
         KeySystemSeq_Push(seq, KeySystem_SeqEndScene);
-        *state = 5;
+        *state = EXCHANGE_SEQ_START_RETRY_SCENE;
         break;
-    case 12:
+    case EXCHANGE_SEQ_END_SCENE_CANCELED:
         KeySystemSeq_Push(seq, KeySystem_SeqEndScene);
-        *state = 25;
+        *state = EXCHANGE_SEQ_END;
         break;
-    case 13: {
+    case EXCHANGE_SEQ_SEND_SAVE_INFO: {
         KeySystemNetSend send;
 
         send.size = sizeof(KeySystemSaveInfo);
@@ -334,13 +382,13 @@ static void KeySystemFlow_SeqExchange(KeySystemSeq *seq, int *state, void *work)
         (*state)++;
         break;
     }
-    case 14:
+    case EXCHANGE_SEQ_WAIT_SAVE_INFO:
         if (KeySystemNet_GetState(wk->net) == KEY_SYSTEM_NET_STATE_CONNECTED) {
             wk->choice = KeySystemNet_GetReceived(wk->net, &wk->partnerSaveInfo, sizeof(KeySystemSaveInfo));
             (*state)++;
         }
         break;
-    case 15: {
+    case EXCHANGE_SEQ_SEND_KEYS: {
         KeySystemNetSend send;
 
         send.size = sizeof(KeySystemKeyState);
@@ -349,21 +397,21 @@ static void KeySystemFlow_SeqExchange(KeySystemSeq *seq, int *state, void *work)
         (*state)++;
         break;
     }
-    case 16:
+    case EXCHANGE_SEQ_WAIT_KEYS:
         if (KeySystemNet_GetState(wk->net) == KEY_SYSTEM_NET_STATE_CONNECTED) {
             wk->choice = KeySystemNet_GetReceived(wk->net, &wk->partnerKeys, sizeof(KeySystemKeyState));
             (*state)++;
         }
         break;
-    case 17:
+    case EXCHANGE_SEQ_END_CONNECT_SCENE:
         KeySystemSeq_Push(seq, KeySystem_SeqEndScene);
         if (wk->choice) {
             (*state)++;
         } else {
-            *state = 20;
+            *state = EXCHANGE_SEQ_DISCONNECT;
         }
         break;
-    case 18:
+    case EXCHANGE_SEQ_FIRST_TRANSFER:
         if (wk->isParent) {
             KeySystemSeq_Push(seq, KeySystemFlow_SeqReceive);
         } else {
@@ -371,7 +419,7 @@ static void KeySystemFlow_SeqExchange(KeySystemSeq *seq, int *state, void *work)
         }
         (*state)++;
         break;
-    case 19:
+    case EXCHANGE_SEQ_SECOND_TRANSFER:
         if (!wk->isParent) {
             KeySystemSeq_Push(seq, KeySystemFlow_SeqReceive);
         } else {
@@ -379,33 +427,33 @@ static void KeySystemFlow_SeqExchange(KeySystemSeq *seq, int *state, void *work)
         }
         (*state)++;
         break;
-    case 20:
+    case EXCHANGE_SEQ_DISCONNECT:
         KeySystemNet_Request(wk->net, KEY_SYSTEM_NET_REQUEST_DISCONNECT, NULL);
         (*state)++;
         break;
-    case 21:
+    case EXCHANGE_SEQ_WAIT_DISCONNECT:
         if (KeySystemNet_GetState(wk->net) == KEY_SYSTEM_NET_STATE_IDLE) {
             (*state)++;
         }
         break;
-    case 22:
+    case EXCHANGE_SEQ_MERGE_KEYS:
         if (KeySystemKeyState_CanExchange(&wk->keys, &wk->partnerKeys, TRUE)) {
             KeySystemKeyState_Receive(&wk->keys, &wk->partnerKeys);
             KeySystemKeyState_Save(&wk->keys, wk->keyInfo);
             KeySystemSeq_Push(seq, KeySystemFlow_SeqSave);
         }
-        *state = 23;
+        *state = EXCHANGE_SEQ_PRINT_DONE;
         break;
-    case 23:
+    case EXCHANGE_SEQ_PRINT_DONE:
         KeySystemMsgWin_PrintMsg(wk->msgWin, wk->msgData, 57, KEY_SYSTEM_MSG_STREAM_FAST);
         (*state)++;
         break;
-    case 24:
+    case EXCHANGE_SEQ_WAIT_DONE_PRINT:
         if (KeySystemMsgWin_IsDone(wk->msgWin)) {
             (*state)++;
         }
         break;
-    case 25:
+    case EXCHANGE_SEQ_END:
         KeySystemNet_SetMode(wk->net, KEY_SYSTEM_NET_MODE_NONE);
         KeySystem_FreeMsgWin(wk);
         GFL_BGSysQueueScrLoad(0);
@@ -414,15 +462,23 @@ static void KeySystemFlow_SeqExchange(KeySystemSeq *seq, int *state, void *work)
     }
 }
 
+enum {
+    SETTINGS_SEQ_START_SCENE,
+    SETTINGS_SEQ_WAIT_CHOICE,
+    SETTINGS_SEQ_END_SCENE,
+    SETTINGS_SEQ_RUN_CHOICE,
+    SETTINGS_SEQ_RESTART,
+};
+
 static void KeySystemFlow_SeqSettings(KeySystemSeq *seq, int *state, void *work) {
     KeySystemWork *wk = work;
 
     switch (*state) {
-    case 0:
+    case SETTINGS_SEQ_START_SCENE:
         KeySystemSeq_Push(seq, KeySystemFlow_SeqStartSettingsScene);
         (*state)++;
         break;
-    case 1:
+    case SETTINGS_SEQ_WAIT_CHOICE:
         KeySystemList_Update(wk->list);
         if (KeySystemList_IsChanged(wk->list) && KeySystemMsgWin_IsDone(wk->infoWin)) {
             KeySystemMsgWin_PrintMsg(wk->infoWin, wk->msgData,
@@ -437,86 +493,106 @@ static void KeySystemFlow_SeqSettings(KeySystemSeq *seq, int *state, void *work)
             (*state)++;
         }
         break;
-    case 2:
+    case SETTINGS_SEQ_END_SCENE:
         KeySystemSeq_Push(seq, KeySystem_SeqEndScene);
         (*state)++;
         break;
-    case 3:
+    case SETTINGS_SEQ_RUN_CHOICE:
         switch (wk->choice) {
         case KEY_LIST_DIFFICULTY:
             KeySystemSeq_Push(seq, KeySystemFlow_SeqDifficulty);
-            *state = 4;
+            *state = SETTINGS_SEQ_RESTART;
             break;
         case KEY_LIST_CITY:
             KeySystemSeq_Push(seq, KeySystemFlow_SeqCity);
-            *state = 4;
+            *state = SETTINGS_SEQ_RESTART;
             break;
         case KEY_LIST_CHAMBER:
             KeySystemSeq_Push(seq, KeySystemFlow_SeqChamber);
-            *state = 4;
+            *state = SETTINGS_SEQ_RESTART;
             break;
         case KEY_LIST_BACK:
             KeySystemSeq_Pop(seq);
             break;
         }
         break;
-    case 4:
-        *state = 0;
+    case SETTINGS_SEQ_RESTART:
+        *state = SETTINGS_SEQ_START_SCENE;
         break;
     }
 }
+
+// The items that go back, which come last in the lists of the key selections
+#define DIFFICULTY_LIST_BACK 3
+#define CITY_LIST_BACK 2
+#define CHAMBER_LIST_BACK 3
+
+enum {
+    KEY_SELECT_SEQ_START_SCENE,
+    KEY_SELECT_SEQ_WAIT_SELECT,
+    KEY_SELECT_SEQ_SAVE,
+    KEY_SELECT_SEQ_PRINT_INFO,
+    KEY_SELECT_SEQ_WAIT_SAVED,
+    KEY_SELECT_SEQ_PRINT_CHOSEN,
+    KEY_SELECT_SEQ_WAIT_CHOSEN_PRINT,
+    KEY_SELECT_SEQ_RESET_SELECT,
+    KEY_SELECT_SEQ_PRINT_LOCKED,
+    KEY_SELECT_SEQ_WAIT_LOCKED_PRINT,
+    KEY_SELECT_SEQ_END_SCENE,
+    KEY_SELECT_SEQ_END,
+};
 
 static void KeySystemFlow_SeqDifficulty(KeySystemSeq *seq, int *state, void *work) {
     KeySystemWork *wk = work;
 
     switch (*state) {
-    case 0:
+    case KEY_SELECT_SEQ_START_SCENE:
         KeySystemSeq_Push(seq, KeySystemFlow_SeqStartDifficultyScene);
         (*state)++;
         break;
-    case 1:
+    case KEY_SELECT_SEQ_WAIT_SELECT:
         KeySystemKeySelect_Update(&wk->keySelect);
         if (KeySystemKeySelect_IsDecided(&wk->keySelect)) {
-            if (KeySystemKeySelect_GetCursor(&wk->keySelect) == 3) {
-                *state = 10;
+            if (KeySystemKeySelect_GetCursor(&wk->keySelect) == DIFFICULTY_LIST_BACK) {
+                *state = KEY_SELECT_SEQ_END_SCENE;
             } else {
-                *state = 2;
+                *state = KEY_SELECT_SEQ_SAVE;
             }
         } else if (KeySystemKeySelect_GetResult(&wk->keySelect) == KEY_SELECT_LOCKED) {
-            *state = 8;
+            *state = KEY_SELECT_SEQ_PRINT_LOCKED;
         }
         break;
-    case 2:
+    case KEY_SELECT_SEQ_SAVE:
         KeySystem_CreateMsgWin(wk, HEAPID_KEY_SYSTEM);
         KeySystemSeq_Push(seq, KeySystemFlow_SeqSave);
         (*state)++;
         break;
-    case 3:
+    case KEY_SELECT_SEQ_PRINT_INFO:
         KeySystemMsgWin_PrintMsg(wk->infoWin, wk->msgData, KeySystemFlow_GetDifficultyMsg(wk->keyInfo),
                                  KEY_SYSTEM_MSG_PRINT);
         (*state)++;
         break;
-    case 4:
+    case KEY_SELECT_SEQ_WAIT_SAVED:
         if (KeySystemMsgWin_IsDone(wk->msgWin)) {
             (*state)++;
         }
         break;
-    case 5:
+    case KEY_SELECT_SEQ_PRINT_CHOSEN:
         KeySystemMsgWin_PrintMsg(wk->msgWin, wk->msgData, GetGameDifficulty(wk->keyInfo) + 112, KEY_SYSTEM_MSG_STREAM);
         (*state)++;
         break;
-    case 6:
+    case KEY_SELECT_SEQ_WAIT_CHOSEN_PRINT:
         if (KeySystemMsgWin_IsDone(wk->msgWin)) {
-            *state = 7;
+            *state = KEY_SELECT_SEQ_RESET_SELECT;
         }
         break;
-    case 7:
+    case KEY_SELECT_SEQ_RESET_SELECT:
         KeySystem_FreeMsgWin(wk);
         GFL_BGSysQueueScrLoad(0);
         KeySystemKeySelect_Reset(&wk->keySelect);
-        *state = 1;
+        *state = KEY_SELECT_SEQ_WAIT_SELECT;
         break;
-    case 8:
+    case KEY_SELECT_SEQ_PRINT_LOCKED:
         KeySystem_CreateMsgWin(wk, HEAPID_KEY_SYSTEM);
         switch (KeySystemKeySelect_GetIndex(&wk->keySelect)) {
         case GAME_DIFFICULTY_EASY:
@@ -528,19 +604,19 @@ static void KeySystemFlow_SeqDifficulty(KeySystemSeq *seq, int *state, void *wor
         }
         (*state)++;
         break;
-    case 9:
+    case KEY_SELECT_SEQ_WAIT_LOCKED_PRINT:
         if (KeySystemMsgWin_IsDone(wk->msgWin)) {
             GFL_BGSysQueueScrLoad(0);
             if (GCTX_HIDGetPressedKeys()) {
-                *state = 7;
+                *state = KEY_SELECT_SEQ_RESET_SELECT;
             }
         }
         break;
-    case 10:
+    case KEY_SELECT_SEQ_END_SCENE:
         KeySystemSeq_Push(seq, KeySystem_SeqEndScene);
         (*state)++;
         break;
-    case 11:
+    case KEY_SELECT_SEQ_END:
         KeySystemSeq_Pop(seq);
         break;
     }
@@ -550,38 +626,38 @@ static void KeySystemFlow_SeqCity(KeySystemSeq *seq, int *state, void *work) {
     KeySystemWork *wk = work;
 
     switch (*state) {
-    case 0:
+    case KEY_SELECT_SEQ_START_SCENE:
         KeySystemSeq_Push(seq, KeySystemFlow_SeqStartCityScene);
         (*state)++;
         break;
-    case 1:
+    case KEY_SELECT_SEQ_WAIT_SELECT:
         KeySystemKeySelect_Update(&wk->keySelect);
         if (KeySystemKeySelect_IsDecided(&wk->keySelect)) {
-            if (KeySystemKeySelect_GetCursor(&wk->keySelect) == 2) {
-                *state = 10;
+            if (KeySystemKeySelect_GetCursor(&wk->keySelect) == CITY_LIST_BACK) {
+                *state = KEY_SELECT_SEQ_END_SCENE;
             } else {
-                *state = 2;
+                *state = KEY_SELECT_SEQ_SAVE;
             }
         } else if (KeySystemKeySelect_GetResult(&wk->keySelect) == KEY_SELECT_LOCKED ||
                    KeySystemKeySelect_GetResult(&wk->keySelect) == KEY_SELECT_IN_AREA) {
-            *state = 8;
+            *state = KEY_SELECT_SEQ_PRINT_LOCKED;
         }
         break;
-    case 2:
+    case KEY_SELECT_SEQ_SAVE:
         KeySystem_CreateMsgWin(wk, HEAPID_KEY_SYSTEM);
         KeySystemSeq_Push(seq, KeySystemFlow_SeqSave);
         (*state)++;
         break;
-    case 3:
+    case KEY_SELECT_SEQ_PRINT_INFO:
         KeySystemMsgWin_PrintMsg(wk->infoWin, wk->msgData, KeySystemFlow_GetCityMsg(wk->keyInfo), KEY_SYSTEM_MSG_PRINT);
         (*state)++;
         break;
-    case 4:
+    case KEY_SELECT_SEQ_WAIT_SAVED:
         if (KeySystemMsgWin_IsDone(wk->msgWin)) {
             (*state)++;
         }
         break;
-    case 5:
+    case KEY_SELECT_SEQ_PRINT_CHOSEN:
 #ifdef BLACK2
         KeySystemMsgWin_PrintMsg(wk->msgWin, wk->msgData, KeyInfo_GetCityKey(wk->keyInfo) + 115, KEY_SYSTEM_MSG_STREAM);
 #else
@@ -590,18 +666,18 @@ static void KeySystemFlow_SeqCity(KeySystemSeq *seq, int *state, void *work) {
 #endif
         (*state)++;
         break;
-    case 6:
+    case KEY_SELECT_SEQ_WAIT_CHOSEN_PRINT:
         if (KeySystemMsgWin_IsDone(wk->msgWin)) {
-            *state = 7;
+            *state = KEY_SELECT_SEQ_RESET_SELECT;
         }
         break;
-    case 7:
+    case KEY_SELECT_SEQ_RESET_SELECT:
         KeySystem_FreeMsgWin(wk);
         GFL_BGSysQueueScrLoad(0);
         KeySystemKeySelect_Reset(&wk->keySelect);
-        *state = 1;
+        *state = KEY_SELECT_SEQ_WAIT_SELECT;
         break;
-    case 8:
+    case KEY_SELECT_SEQ_PRINT_LOCKED:
         KeySystem_CreateMsgWin(wk, HEAPID_KEY_SYSTEM);
         if (KeySystemKeySelect_GetResult(&wk->keySelect) == KEY_SELECT_IN_AREA) {
             KeySystemMsgWin_PrintMsg(wk->msgWin, wk->msgData, 68, KEY_SYSTEM_MSG_PRINT);
@@ -614,19 +690,19 @@ static void KeySystemFlow_SeqCity(KeySystemSeq *seq, int *state, void *work) {
         }
         (*state)++;
         break;
-    case 9:
+    case KEY_SELECT_SEQ_WAIT_LOCKED_PRINT:
         if (KeySystemMsgWin_IsDone(wk->msgWin)) {
             GFL_BGSysQueueScrLoad(0);
             if (GCTX_HIDGetPressedKeys()) {
-                *state = 7;
+                *state = KEY_SELECT_SEQ_RESET_SELECT;
             }
         }
         break;
-    case 10:
+    case KEY_SELECT_SEQ_END_SCENE:
         KeySystemSeq_Push(seq, KeySystem_SeqEndScene);
         (*state)++;
         break;
-    case 11:
+    case KEY_SELECT_SEQ_END:
         KeySystemSeq_Pop(seq);
         break;
     }
@@ -636,123 +712,136 @@ static void KeySystemFlow_SeqChamber(KeySystemSeq *seq, int *state, void *work) 
     KeySystemWork *wk = work;
 
     switch (*state) {
-    case 0:
+    case KEY_SELECT_SEQ_START_SCENE:
         KeySystemSeq_Push(seq, KeySystemFlow_SeqStartChamberScene);
         (*state)++;
         break;
-    case 1:
+    case KEY_SELECT_SEQ_WAIT_SELECT:
         KeySystemKeySelect_Update(&wk->keySelect);
         if (KeySystemKeySelect_IsDecided(&wk->keySelect)) {
-            if (KeySystemKeySelect_GetCursor(&wk->keySelect) == 3) {
-                *state = 10;
+            if (KeySystemKeySelect_GetCursor(&wk->keySelect) == CHAMBER_LIST_BACK) {
+                *state = KEY_SELECT_SEQ_END_SCENE;
             } else {
-                *state = 2;
+                *state = KEY_SELECT_SEQ_SAVE;
             }
         } else if (KeySystemKeySelect_GetResult(&wk->keySelect) == KEY_SELECT_LOCKED) {
-            *state = 8;
+            *state = KEY_SELECT_SEQ_PRINT_LOCKED;
         }
         break;
-    case 2:
+    case KEY_SELECT_SEQ_SAVE:
         KeySystem_CreateMsgWin(wk, HEAPID_KEY_SYSTEM);
         KeySystemSeq_Push(seq, KeySystemFlow_SeqSave);
         (*state)++;
         break;
-    case 3:
+    case KEY_SELECT_SEQ_PRINT_INFO:
         KeySystemMsgWin_PrintMsg(wk->infoWin, wk->msgData, KeySystemFlow_GetChamberMsg(wk->keyInfo),
                                  KEY_SYSTEM_MSG_PRINT);
         (*state)++;
         break;
-    case 4:
+    case KEY_SELECT_SEQ_WAIT_SAVED:
         if (KeySystemMsgWin_IsDone(wk->msgWin)) {
             (*state)++;
         }
         break;
-    case 5:
+    case KEY_SELECT_SEQ_PRINT_CHOSEN:
         KeySystemMsgWin_PrintMsg(wk->msgWin, wk->msgData, KeyInfo_GetChamberKey(wk->keyInfo) + 117,
                                  KEY_SYSTEM_MSG_STREAM);
         (*state)++;
         break;
-    case 6:
+    case KEY_SELECT_SEQ_WAIT_CHOSEN_PRINT:
         if (KeySystemMsgWin_IsDone(wk->msgWin)) {
-            *state = 7;
+            *state = KEY_SELECT_SEQ_RESET_SELECT;
         }
         break;
-    case 7:
+    case KEY_SELECT_SEQ_RESET_SELECT:
         KeySystem_FreeMsgWin(wk);
         GFL_BGSysQueueScrLoad(0);
         KeySystemKeySelect_Reset(&wk->keySelect);
-        *state = 1;
+        *state = KEY_SELECT_SEQ_WAIT_SELECT;
         break;
-    case 8:
+    case KEY_SELECT_SEQ_PRINT_LOCKED:
         KeySystem_CreateMsgWin(wk, HEAPID_KEY_SYSTEM);
         switch (KeySystemKeySelect_GetIndex(&wk->keySelect)) {
-        case 1:
+        case KEY_INFO_CHAMBER_IRON:
             KeySystemMsgWin_PrintMsg(wk->msgWin, wk->msgData, 97, KEY_SYSTEM_MSG_PRINT);
             break;
-        case 2:
+        case KEY_INFO_CHAMBER_ICEBERG:
             KeySystemMsgWin_PrintMsg(wk->msgWin, wk->msgData, 98, KEY_SYSTEM_MSG_PRINT);
             break;
         }
         (*state)++;
         break;
-    case 9:
+    case KEY_SELECT_SEQ_WAIT_LOCKED_PRINT:
         if (KeySystemMsgWin_IsDone(wk->msgWin)) {
             GFL_BGSysQueueScrLoad(0);
             if (GCTX_HIDGetPressedKeys()) {
-                *state = 7;
+                *state = KEY_SELECT_SEQ_RESET_SELECT;
             }
         }
         break;
-    case 10:
+    case KEY_SELECT_SEQ_END_SCENE:
         KeySystemSeq_Push(seq, KeySystem_SeqEndScene);
         (*state)++;
         break;
-    case 11:
+    case KEY_SELECT_SEQ_END:
         KeySystemSeq_Pop(seq);
         break;
     }
 }
 
+enum {
+    RECEIVE_SEQ_CHECK_EXCHANGE,
+    RECEIVE_SEQ_PRINT_NOTHING,
+    RECEIVE_SEQ_WAIT_NOTHING_PRINT,
+    RECEIVE_SEQ_START_SCENE,
+    RECEIVE_SEQ_SYNC,
+    RECEIVE_SEQ_WAIT_SYNC,
+    RECEIVE_SEQ_NEXT_KEY,
+    RECEIVE_SEQ_WAIT_KEY_ANIM,
+    RECEIVE_SEQ_END_SCENE,
+    RECEIVE_SEQ_END,
+};
+
 static void KeySystemFlow_SeqReceive(KeySystemSeq *seq, int *state, void *work) {
     KeySystemWork *wk = work;
 
     switch (*state) {
-    case 0:
+    case RECEIVE_SEQ_CHECK_EXCHANGE:
         if (KeySystemKeyState_CanExchange(&wk->keys, &wk->partnerKeys, TRUE)) {
-            *state = 3;
+            *state = RECEIVE_SEQ_START_SCENE;
         } else {
-            *state = 1;
+            *state = RECEIVE_SEQ_PRINT_NOTHING;
         }
         break;
-    case 1:
+    case RECEIVE_SEQ_PRINT_NOTHING:
         KeySystemMsgWin_PrintMsg(wk->msgWin, wk->msgData, 59, KEY_SYSTEM_MSG_STREAM_FAST);
         (*state)++;
         break;
-    case 2:
+    case RECEIVE_SEQ_WAIT_NOTHING_PRINT:
         if (KeySystemMsgWin_IsDone(wk->msgWin)) {
-            *state = 9;
+            *state = RECEIVE_SEQ_END;
         }
         break;
-    case 3:
+    case RECEIVE_SEQ_START_SCENE:
         KeySystemSeq_Push(seq, KeySystemFlow_SeqStartKeyAnimScene);
         wk->timer = 0;
         wk->choice = 0;
         (*state)++;
         break;
-    case 4:
+    case RECEIVE_SEQ_SYNC:
         KeySystemNet_Request(wk->net, KEY_SYSTEM_NET_REQUEST_SYNC, NULL);
         (*state)++;
         break;
-    case 5:
+    case RECEIVE_SEQ_WAIT_SYNC:
         if (KeySystemNet_GetState(wk->net) == KEY_SYSTEM_NET_STATE_CONNECTED) {
             (*state)++;
         }
         break;
-    case 6:
+    case RECEIVE_SEQ_NEXT_KEY:
         // The key that is looked at
         while (TRUE) {
             if (wk->choice >= KEY_SYSTEM_KEY_COUNT) {
-                *state = 8;
+                *state = RECEIVE_SEQ_END_SCENE;
                 return;
             }
             if (KeySystemFlow_FormatKeyMsg(wk, wk->choice, TRUE)) {
@@ -764,68 +853,82 @@ static void KeySystemFlow_SeqReceive(KeySystemSeq *seq, int *state, void *work) 
             }
             wk->choice++;
         }
-    case 7:
+    case RECEIVE_SEQ_WAIT_KEY_ANIM:
         if (KeySystemKeyAnim_Update(&wk->keyAnim)) {
             wk->timer = 0;
             wk->choice++;
-            *state = 4;
+            *state = RECEIVE_SEQ_SYNC;
         }
         break;
-    case 8:
+    case RECEIVE_SEQ_END_SCENE:
         KeySystemSeq_Push(seq, KeySystem_SeqEndScene);
         (*state)++;
         break;
-    case 9:
+    case RECEIVE_SEQ_END:
         KeySystemSeq_Pop(seq);
         break;
     }
 }
 
+enum {
+    SEND_SEQ_CHECK_EXCHANGE,
+    SEND_SEQ_PRINT_NOTHING,
+    SEND_SEQ_WAIT_NOTHING_PRINT,
+    SEND_SEQ_START_SCENE,
+    SEND_SEQ_WAIT_PRINT,
+    SEND_SEQ_SYNC,
+    SEND_SEQ_WAIT_SYNC,
+    SEND_SEQ_NEXT_KEY,
+    SEND_SEQ_WAIT_KEY_PRINT,
+    SEND_SEQ_END_SCENE,
+    SEND_SEQ_END,
+};
+
 static void KeySystemFlow_SeqSend(KeySystemSeq *seq, int *state, void *work) {
     KeySystemWork *wk = work;
 
     switch (*state) {
-    case 0:
+    case SEND_SEQ_CHECK_EXCHANGE:
         if (KeySystemKeyState_CanExchange(&wk->keys, &wk->partnerKeys, FALSE)) {
-            *state = 3;
+            *state = SEND_SEQ_START_SCENE;
         } else {
-            *state = 1;
+            *state = SEND_SEQ_PRINT_NOTHING;
         }
         break;
-    case 1:
+    case SEND_SEQ_PRINT_NOTHING:
         KeySystemMsgWin_PrintMsg(wk->msgWin, wk->msgData, 58, KEY_SYSTEM_MSG_STREAM_FAST);
         (*state)++;
         break;
-    case 2:
+    case SEND_SEQ_WAIT_NOTHING_PRINT:
         if (KeySystemMsgWin_IsDone(wk->msgWin)) {
-            *state = 10;
+            *state = SEND_SEQ_END;
         }
         break;
-    case 3:
+    case SEND_SEQ_START_SCENE:
         KeySystemSeq_Push(seq, KeySystemFlow_SeqStartSendScene);
         wk->timer = 0;
         wk->choice = 0;
         (*state)++;
         break;
-    case 4:
+    case SEND_SEQ_WAIT_PRINT:
         if (KeySystemMsgWin_IsDone(wk->msgWin)) {
             wk->timer = 0;
             (*state)++;
         }
         break;
-    case 5:
+    case SEND_SEQ_SYNC:
         KeySystemNet_Request(wk->net, KEY_SYSTEM_NET_REQUEST_SYNC, NULL);
         (*state)++;
         break;
-    case 6:
+    case SEND_SEQ_WAIT_SYNC:
         if (KeySystemNet_GetState(wk->net) == KEY_SYSTEM_NET_STATE_CONNECTED) {
             (*state)++;
         }
         break;
-    case 7:
+    case SEND_SEQ_NEXT_KEY:
         while (TRUE) {
             if (wk->choice >= KEY_SYSTEM_KEY_COUNT) {
-                *state = 9;
+                *state = SEND_SEQ_END_SCENE;
                 return;
             }
             if (KeySystemFlow_FormatKeyMsg(wk, wk->choice, FALSE)) {
@@ -835,33 +938,44 @@ static void KeySystemFlow_SeqSend(KeySystemSeq *seq, int *state, void *work) {
             }
             wk->choice++;
         }
-    case 8:
+    case SEND_SEQ_WAIT_KEY_PRINT:
         if (KeySystemMsgWin_IsDone(wk->msgWin)) {
             wk->timer = 0;
             wk->choice++;
-            *state = 5;
+            *state = SEND_SEQ_SYNC;
         }
         break;
-    case 9:
+    case SEND_SEQ_END_SCENE:
         KeySystemSeq_Push(seq, KeySystem_SeqEndScene);
         (*state)++;
         break;
-    case 10:
+    case SEND_SEQ_END:
         KeySystemSeq_Pop(seq);
         break;
     }
 }
+
+enum {
+    SAVE_SEQ_PRINT_SAVING,
+    SAVE_SEQ_START_SAVE,
+    SAVE_SEQ_WAIT_SAVE,
+    SAVE_SEQ_PLAY_SE,
+    SAVE_SEQ_PAUSE,
+    SAVE_SEQ_PRINT_SAVED,
+    SAVE_SEQ_WAIT_SAVED_PRINT,
+    SAVE_SEQ_END,
+};
 
 static void KeySystemFlow_SeqSave(KeySystemSeq *seq, int *state, void *work) {
     KeySystemWork *wk = work;
     u32 mode;
 
     switch (*state) {
-    case 0:
+    case SAVE_SEQ_PRINT_SAVING:
         KeySystemMsgWin_PrintMsg(wk->msgWin, wk->msgData, 29, KEY_SYSTEM_MSG_PRINT_WAIT_ICON);
         (*state)++;
         break;
-    case 1:
+    case SAVE_SEQ_START_SAVE:
         if (KeySystemMsgWin_IsDone(wk->msgWin)) {
             GFL_BGSysQueueScrLoad(0);
             if (SaveControl_IsDataAlreadyPresent(GameData_GetSaveControl(wk->param->gameData))) {
@@ -873,7 +987,7 @@ static void KeySystemFlow_SeqSave(KeySystemSeq *seq, int *state, void *work) {
             (*state)++;
         }
         break;
-    case 2:
+    case SAVE_SEQ_WAIT_SAVE:
         wk->timer++;
         if (SaveControl_IsDataAlreadyPresent(GameData_GetSaveControl(wk->param->gameData))) {
             if (GameData_UpdateSave(wk->param->gameData) == 2) {
@@ -883,14 +997,14 @@ static void KeySystemFlow_SeqSave(KeySystemSeq *seq, int *state, void *work) {
             (*state)++;
         }
         break;
-    case 3:
+    case SAVE_SEQ_PLAY_SE:
         GFL_SndSEPlay(SEQ_SE_SAVE);
-        *state = 4;
+        *state = SAVE_SEQ_PAUSE;
         break;
-    case 4:
-        *state = 5;
+    case SAVE_SEQ_PAUSE:
+        *state = SAVE_SEQ_PRINT_SAVED;
         break;
-    case 5:
+    case SAVE_SEQ_PRINT_SAVED:
         if (wk->timer++ > 60) {
             mode = KEY_SYSTEM_MSG_STREAM;
             if (GFL_NetIsInitialized()) {
@@ -901,31 +1015,37 @@ static void KeySystemFlow_SeqSave(KeySystemSeq *seq, int *state, void *work) {
             (*state)++;
         }
         break;
-    case 6:
+    case SAVE_SEQ_WAIT_SAVED_PRINT:
         if (KeySystemMsgWin_IsDone(wk->msgWin) && !GFL_SndPlayerIsActiveAny()) {
             (*state)++;
         }
         break;
-    case 7:
+    case SAVE_SEQ_END:
         KeySystemSeq_Pop(seq);
         break;
     }
 }
 
+enum {
+    SCENE_SEQ_START,
+    SCENE_SEQ_WAIT_IDLE,
+    SCENE_SEQ_END,
+};
+
 static void KeySystemFlow_SeqStartMenuScene(KeySystemSeq *seq, int *state, void *work) {
     KeySystemWork *wk = work;
 
     switch (*state) {
-    case 0:
+    case SCENE_SEQ_START:
         KeySystemScene_Start(wk->scene, &sMenuSceneFuncs, HEAPID_KEY_SYSTEM);
         (*state)++;
         break;
-    case 1:
+    case SCENE_SEQ_WAIT_IDLE:
         if (KeySystemScene_IsIdle(wk->scene)) {
             (*state)++;
         }
         break;
-    case 2:
+    case SCENE_SEQ_END:
         KeySystemSeq_Pop(seq);
         break;
     }
@@ -935,16 +1055,16 @@ static void KeySystemFlow_SeqStartConnectScene(KeySystemSeq *seq, int *state, vo
     KeySystemWork *wk = work;
 
     switch (*state) {
-    case 0:
+    case SCENE_SEQ_START:
         KeySystemScene_Start(wk->scene, &sConnectSceneFuncs, HEAPID_KEY_SYSTEM);
         (*state)++;
         break;
-    case 1:
+    case SCENE_SEQ_WAIT_IDLE:
         if (KeySystemScene_IsIdle(wk->scene)) {
             (*state)++;
         }
         break;
-    case 2:
+    case SCENE_SEQ_END:
         KeySystemSeq_Pop(seq);
         break;
     }
@@ -954,16 +1074,16 @@ static void KeySystemFlow_SeqStartSettingsScene(KeySystemSeq *seq, int *state, v
     KeySystemWork *wk = work;
 
     switch (*state) {
-    case 0:
+    case SCENE_SEQ_START:
         KeySystemScene_Start(wk->scene, &sSettingsSceneFuncs, HEAPID_KEY_SYSTEM);
         (*state)++;
         break;
-    case 1:
+    case SCENE_SEQ_WAIT_IDLE:
         if (KeySystemScene_IsIdle(wk->scene)) {
             (*state)++;
         }
         break;
-    case 2:
+    case SCENE_SEQ_END:
         KeySystemSeq_Pop(seq);
         break;
     }
@@ -973,16 +1093,16 @@ static void KeySystemFlow_SeqStartDifficultyScene(KeySystemSeq *seq, int *state,
     KeySystemWork *wk = work;
 
     switch (*state) {
-    case 0:
+    case SCENE_SEQ_START:
         KeySystemScene_Start(wk->scene, &sDifficultySceneFuncs, HEAPID_KEY_SYSTEM);
         (*state)++;
         break;
-    case 1:
+    case SCENE_SEQ_WAIT_IDLE:
         if (KeySystemScene_IsIdle(wk->scene)) {
             (*state)++;
         }
         break;
-    case 2:
+    case SCENE_SEQ_END:
         KeySystemSeq_Pop(seq);
         break;
     }
@@ -992,16 +1112,16 @@ static void KeySystemFlow_SeqStartCityScene(KeySystemSeq *seq, int *state, void 
     KeySystemWork *wk = work;
 
     switch (*state) {
-    case 0:
+    case SCENE_SEQ_START:
         KeySystemScene_Start(wk->scene, &sCitySceneFuncs, HEAPID_KEY_SYSTEM);
         (*state)++;
         break;
-    case 1:
+    case SCENE_SEQ_WAIT_IDLE:
         if (KeySystemScene_IsIdle(wk->scene)) {
             (*state)++;
         }
         break;
-    case 2:
+    case SCENE_SEQ_END:
         KeySystemSeq_Pop(seq);
         break;
     }
@@ -1011,16 +1131,16 @@ static void KeySystemFlow_SeqStartKeyAnimScene(KeySystemSeq *seq, int *state, vo
     KeySystemWork *wk = work;
 
     switch (*state) {
-    case 0:
+    case SCENE_SEQ_START:
         KeySystemScene_Start(wk->scene, &sKeyAnimSceneFuncs, HEAPID_KEY_SYSTEM);
         (*state)++;
         break;
-    case 1:
+    case SCENE_SEQ_WAIT_IDLE:
         if (KeySystemScene_IsIdle(wk->scene)) {
             (*state)++;
         }
         break;
-    case 2:
+    case SCENE_SEQ_END:
         KeySystemSeq_Pop(seq);
         break;
     }
@@ -1030,16 +1150,16 @@ static void KeySystemFlow_SeqStartSendScene(KeySystemSeq *seq, int *state, void 
     KeySystemWork *wk = work;
 
     switch (*state) {
-    case 0:
+    case SCENE_SEQ_START:
         KeySystemScene_Start(wk->scene, &sSendSceneFuncs, HEAPID_KEY_SYSTEM);
         (*state)++;
         break;
-    case 1:
+    case SCENE_SEQ_WAIT_IDLE:
         if (KeySystemScene_IsIdle(wk->scene)) {
             (*state)++;
         }
         break;
-    case 2:
+    case SCENE_SEQ_END:
         KeySystemSeq_Pop(seq);
         break;
     }
@@ -1049,16 +1169,16 @@ static void KeySystemFlow_SeqStartKeysHeldScene(KeySystemSeq *seq, int *state, v
     KeySystemWork *wk = work;
 
     switch (*state) {
-    case 0:
+    case SCENE_SEQ_START:
         KeySystemScene_Start(wk->scene, &sKeysHeldSceneFuncs, HEAPID_KEY_SYSTEM);
         (*state)++;
         break;
-    case 1:
+    case SCENE_SEQ_WAIT_IDLE:
         if (KeySystemScene_IsIdle(wk->scene)) {
             (*state)++;
         }
         break;
-    case 2:
+    case SCENE_SEQ_END:
         KeySystemSeq_Pop(seq);
         break;
     }
@@ -1068,16 +1188,16 @@ static void KeySystemFlow_SeqStartChamberScene(KeySystemSeq *seq, int *state, vo
     KeySystemWork *wk = work;
 
     switch (*state) {
-    case 0:
+    case SCENE_SEQ_START:
         KeySystemScene_Start(wk->scene, &sChamberSceneFuncs, HEAPID_KEY_SYSTEM);
         (*state)++;
         break;
-    case 1:
+    case SCENE_SEQ_WAIT_IDLE:
         if (KeySystemScene_IsIdle(wk->scene)) {
             (*state)++;
         }
         break;
-    case 2:
+    case SCENE_SEQ_END:
         KeySystemSeq_Pop(seq);
         break;
     }

@@ -445,12 +445,12 @@ static int KeySystemKeySelect_SelectChamber(int index, KeySystemKeySelect *keySe
     }
     if (index < 3) {
         switch (index) {
-        case 1:
+        case KEY_INFO_CHAMBER_IRON:
             if (!keyEnabler(keySelect->keyInfo, KEY_SYSTEM_KEY_IRON)) {
                 return KEY_SELECT_LOCKED;
             }
             break;
-        case 2:
+        case KEY_INFO_CHAMBER_ICEBERG:
             if (!keyEnabler(keySelect->keyInfo, KEY_SYSTEM_KEY_ICEBERG)) {
                 return KEY_SELECT_LOCKED;
             }
@@ -610,6 +610,29 @@ BOOL KeySystemKeyAnim_Update(KeySystemKeyAnim *anim) {
     return anim->func(anim);
 }
 
+enum {
+    UNLOCK_ANIM_PRINT_NAME,
+    UNLOCK_ANIM_WAIT_NAME,
+    UNLOCK_ANIM_START_PLATE_UP,
+    UNLOCK_ANIM_MOVE_PLATE_UP,
+    UNLOCK_ANIM_WAIT_PLATE,
+    UNLOCK_ANIM_START_KEY_IN,
+    UNLOCK_ANIM_MOVE_KEY_IN,
+    UNLOCK_ANIM_WAIT_KEY,
+    UNLOCK_ANIM_START_KEY_OUT,
+    UNLOCK_ANIM_MOVE_KEY_OUT,
+    UNLOCK_ANIM_START_LOCK_OPEN,
+    UNLOCK_ANIM_WAIT_LOCK_OPEN,
+    UNLOCK_ANIM_START_EFFECT,
+    UNLOCK_ANIM_WAIT_EFFECT,
+    UNLOCK_ANIM_WAIT_AFTER_EFFECT,
+    UNLOCK_ANIM_PRINT_MSG,
+    UNLOCK_ANIM_WAIT_MSG,
+    UNLOCK_ANIM_START_PLATE_DOWN,
+    UNLOCK_ANIM_MOVE_PLATE_DOWN,
+    UNLOCK_ANIM_END,
+};
+
 // The key comes down, the plate with its name rises, and the lock opens
 static BOOL KeySystemKeyAnim_Unlock(KeySystemKeyAnim *anim) {
     if (!anim->active) {
@@ -617,24 +640,24 @@ static BOOL KeySystemKeyAnim_Unlock(KeySystemKeyAnim *anim) {
     }
     anim->frame++;
     switch (anim->state) {
-    case 0:
+    case UNLOCK_ANIM_PRINT_NAME:
         KeySystemOamText_SetColor(anim->text, PRINT_COLOR(1, 2, 0));
         KeySystemOamText_Print(anim->text, anim->msgData, anim->msgId, anim->font);
         anim->state++;
-    case 1:
+    case UNLOCK_ANIM_WAIT_NAME:
         KeySystemOamText_Update(anim->text);
         if (KeySystemOamText_IsDone(anim->text)) {
             anim->state++;
         }
         break;
-    case 2:
+    case UNLOCK_ANIM_START_PLATE_UP:
         KeySystemAccelMove_Init(&anim->move, &sPlateUpStart, &sPlateUpEnd, FX32_CONST(-3), PLATE_UP_FRAMES);
         ClActor_SetVisible(anim->plateActor, TRUE);
         ClActor_SetVisible(anim->lockActor, TRUE);
         ClActor_SetSequence(anim->lockActor, 7);
         BmpOam_ActorSetDrawEnable(KeySystemOamText_GetActor(anim->text), TRUE);
         anim->state++;
-    case 3: {
+    case UNLOCK_ANIM_MOVE_PLATE_UP: {
         ClActorPos pos;
         ClActorPos actorPos;
         BmpOamActor *actor;
@@ -655,20 +678,20 @@ static BOOL KeySystemKeyAnim_Unlock(KeySystemKeyAnim *anim) {
         BmpOam_ActorSetPos(actor, actorPos.x, actorPos.y);
         break;
     }
-    case 4:
+    case UNLOCK_ANIM_WAIT_PLATE:
         if (anim->timer++ > 60) {
             anim->timer = 0;
             anim->state++;
         }
         break;
-    case 5:
+    case UNLOCK_ANIM_START_KEY_IN:
         KeySystemTween_Init(&anim->tween, &sKeyInStart, &sKeyInEnd, KEY_IN_FRAMES);
         ClActor_SetVisible(anim->keyActor, TRUE);
         ClActor_SetSequence(anim->keyActor, 8);
         ClActor_SetAutoAnim(anim->keyActor, TRUE);
         GFL_SndSEPlay(SEQ_SE_SW_KEYSYS_02);
         anim->state++;
-    case 6: {
+    case UNLOCK_ANIM_MOVE_KEY_IN: {
         ClActorPos pos;
 
         if (KeySystemTween_Update(&anim->tween) && ClActor_GetAnimFrame(anim->keyActor) == 0) {
@@ -679,17 +702,17 @@ static BOOL KeySystemKeyAnim_Unlock(KeySystemKeyAnim *anim) {
         ClActor_SetSurfacePos(anim->keyActor, &pos, CLACT_SURFACE_MAIN);
         break;
     }
-    case 7:
+    case UNLOCK_ANIM_WAIT_KEY:
         if (anim->timer++ > 60) {
             anim->timer = 0;
             anim->state++;
         }
         break;
-    case 8:
+    case UNLOCK_ANIM_START_KEY_OUT:
         KeySystemTween_Init(&anim->tween, &sKeyOutStart, &sKeyOutEnd, KEY_OUT_FRAMES);
         ClActor_SetSequence(anim->keyActor, 9);
         anim->state++;
-    case 9: {
+    case UNLOCK_ANIM_MOVE_KEY_OUT: {
         ClActorPos pos;
 
         if (KeySystemTween_Update(&anim->tween) && !ClActor_IsAnimActive(anim->keyActor)) {
@@ -701,18 +724,18 @@ static BOOL KeySystemKeyAnim_Unlock(KeySystemKeyAnim *anim) {
         ClActor_SetSurfacePos(anim->keyActor, &pos, CLACT_SURFACE_MAIN);
         break;
     }
-    case 10:
+    case UNLOCK_ANIM_START_LOCK_OPEN:
         ClActor_SetSequence(anim->lockActor, 12);
         ClActor_SetAutoAnim(anim->lockActor, TRUE);
         anim->state++;
         break;
-    case 11:
+    case UNLOCK_ANIM_WAIT_LOCK_OPEN:
         if (!ClActor_IsAnimActive(anim->lockActor)) {
             ClActor_SetVisible(anim->lockActor, FALSE);
             anim->state++;
         }
         break;
-    case 12:
+    case UNLOCK_ANIM_START_EFFECT:
         ClActor_SetSurfacePos(anim->effectActor, &sEffectPos, CLACT_SURFACE_MAIN);
         ClActor_SetVisible(anim->effectActor, TRUE);
         ClActor_SetSequence(anim->effectActor, 11);
@@ -720,32 +743,32 @@ static BOOL KeySystemKeyAnim_Unlock(KeySystemKeyAnim *anim) {
         GFL_SndSEPlay(SEQ_SE_SW_KEYSYS_04);
         anim->state++;
         break;
-    case 13:
+    case UNLOCK_ANIM_WAIT_EFFECT:
         if (!ClActor_IsAnimActive(anim->effectActor)) {
             ClActor_SetVisible(anim->effectActor, FALSE);
             anim->state++;
         }
         break;
-    case 14:
+    case UNLOCK_ANIM_WAIT_AFTER_EFFECT:
         if (anim->timer++ > 120) {
             anim->timer = 0;
             anim->state++;
         }
         break;
-    case 15:
+    case UNLOCK_ANIM_PRINT_MSG:
         KeySystemMsgWin_PrintStr(anim->msgWin, anim->str, KEY_SYSTEM_MSG_STREAM_FAST);
         GFL_BGSysQueueScrLoad(0);
         anim->state++;
         break;
-    case 16:
+    case UNLOCK_ANIM_WAIT_MSG:
         if (KeySystemMsgWin_IsDone(anim->msgWin)) {
             anim->state++;
         }
         break;
-    case 17:
+    case UNLOCK_ANIM_START_PLATE_DOWN:
         KeySystemTween_Init(&anim->tween, &sPlateDownStart, &sPlateDownEnd, PLATE_DOWN_FRAMES);
         anim->state++;
-    case 18: {
+    case UNLOCK_ANIM_MOVE_PLATE_DOWN: {
         ClActorPos pos;
         ClActorPos actorPos;
         BmpOamActor *actor;
@@ -769,12 +792,23 @@ static BOOL KeySystemKeyAnim_Unlock(KeySystemKeyAnim *anim) {
         BmpOam_ActorSetPos(actor, actorPos.x, actorPos.y);
         break;
     }
-    case 19:
+    case UNLOCK_ANIM_END:
         anim->active = FALSE;
         return TRUE;
     }
     return FALSE;
 }
+
+enum {
+    SHOW_ANIM_START_KEY_IN,
+    SHOW_ANIM_MOVE_KEY_IN,
+    SHOW_ANIM_WAIT_KEY,
+    SHOW_ANIM_PRINT_MSG,
+    SHOW_ANIM_WAIT_MSG,
+    SHOW_ANIM_START_KEY_OUT,
+    SHOW_ANIM_MOVE_KEY_OUT,
+    SHOW_ANIM_END,
+};
 
 // The key comes down and goes, for a key whose setting is enabled already
 static BOOL KeySystemKeyAnim_Show(KeySystemKeyAnim *anim) {
@@ -783,13 +817,13 @@ static BOOL KeySystemKeyAnim_Show(KeySystemKeyAnim *anim) {
     }
     anim->frame++;
     switch (anim->state) {
-    case 0:
+    case SHOW_ANIM_START_KEY_IN:
         KeySystemTween_Init(&anim->tween, &sShowInStart, &sShowInEnd, SHOW_IN_FRAMES);
         ClActor_SetVisible(anim->keyActor, TRUE);
         ClActor_SetAutoAnim(anim->keyActor, TRUE);
         GFL_SndSEPlay(SEQ_SE_SW_KEYSYS_02);
         anim->state++;
-    case 1: {
+    case SHOW_ANIM_MOVE_KEY_IN: {
         ClActorPos pos;
 
         if (KeySystemTween_Update(&anim->tween) && ClActor_GetAnimFrame(anim->keyActor) == 0) {
@@ -800,26 +834,26 @@ static BOOL KeySystemKeyAnim_Show(KeySystemKeyAnim *anim) {
         ClActor_SetSurfacePos(anim->keyActor, &pos, CLACT_SURFACE_MAIN);
         break;
     }
-    case 2:
+    case SHOW_ANIM_WAIT_KEY:
         if (anim->timer++ > 60) {
             anim->timer = 0;
             anim->state++;
         }
         break;
-    case 3:
+    case SHOW_ANIM_PRINT_MSG:
         KeySystemMsgWin_PrintStr(anim->msgWin, anim->str, KEY_SYSTEM_MSG_STREAM_FAST);
         GFL_BGSysQueueScrLoad(0);
         anim->state++;
         break;
-    case 4:
+    case SHOW_ANIM_WAIT_MSG:
         if (KeySystemMsgWin_IsDone(anim->msgWin)) {
             anim->state++;
         }
         break;
-    case 5:
+    case SHOW_ANIM_START_KEY_OUT:
         KeySystemTween_Init(&anim->tween, &sShowOutStart, &sShowOutEnd, SHOW_OUT_FRAMES);
         anim->state++;
-    case 6: {
+    case SHOW_ANIM_MOVE_KEY_OUT: {
         ClActorPos pos;
 
         if (KeySystemTween_Update(&anim->tween)) {
@@ -829,7 +863,7 @@ static BOOL KeySystemKeyAnim_Show(KeySystemKeyAnim *anim) {
         ClActor_SetSurfacePos(anim->keyActor, &pos, CLACT_SURFACE_MAIN);
         break;
     }
-    case 7:
+    case SHOW_ANIM_END:
         anim->active = FALSE;
         return TRUE;
     }

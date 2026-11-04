@@ -1,4 +1,5 @@
 #include "types.h"
+#include "app/mb_parent.h"
 #include "app/name_entry.h"
 #include "app/unova_link.h"
 #include "app/wifi_login.h"
@@ -130,16 +131,24 @@ static const u16 sIdChars[32] = {
 void DataConvert_Init(KeySystemWork *wk, HeapID heapId) {
 }
 
+enum {
+    MENU_SEQ_START_SCENE,
+    MENU_SEQ_WAIT_CHOICE,
+    MENU_SEQ_END_SCENE,
+    MENU_SEQ_RUN_CHOICE,
+    MENU_SEQ_END,
+};
+
 void DataConvert_SeqMenu(KeySystemSeq *seq, int *state, void *work) {
     KeySystemWork *wk = work;
     u32 item;
 
     switch (*state) {
-    case 0:
+    case MENU_SEQ_START_SCENE:
         KeySystemSeq_Push(seq, DataConvert_SeqStartMenuScene);
         (*state)++;
         break;
-    case 1:
+    case MENU_SEQ_WAIT_CHOICE:
         KeySystemList_Update(wk->list);
         if (KeySystemList_IsChanged(wk->list) && KeySystemMsgWin_IsDone(wk->infoWin)) {
             item = KeySystemList_GetCursor(wk->list);
@@ -161,24 +170,24 @@ void DataConvert_SeqMenu(KeySystemSeq *seq, int *state, void *work) {
             (*state)++;
         }
         break;
-    case 2:
+    case MENU_SEQ_END_SCENE:
         KeySystemSeq_Push(seq, KeySystem_SeqEndScene);
         (*state)++;
         break;
-    case 3:
+    case MENU_SEQ_RUN_CHOICE:
         if (DataConvert_HasMemories(wk)) {
             switch (wk->choice) {
             case LINK_MENU_WIRELESS:
                 KeySystemSeq_Push(seq, DataConvert_SeqWireless);
-                *state = 0;
+                *state = MENU_SEQ_START_SCENE;
                 break;
             case LINK_MENU_WIFI:
                 KeySystemSeq_Push(seq, DataConvert_SeqWifi);
-                *state = 0;
+                *state = MENU_SEQ_START_SCENE;
                 break;
             case LINK_MENU_MEMORIES:
                 KeySystemSeq_Push(seq, DataConvert_SeqMemoryList);
-                *state = 0;
+                *state = MENU_SEQ_START_SCENE;
                 break;
             case LINK_MENU_BACK:
                 (*state)++;
@@ -188,11 +197,11 @@ void DataConvert_SeqMenu(KeySystemSeq *seq, int *state, void *work) {
             switch (wk->choice) {
             case LINK_MENU_WIRELESS:
                 KeySystemSeq_Push(seq, DataConvert_SeqWireless);
-                *state = 0;
+                *state = MENU_SEQ_START_SCENE;
                 break;
             case LINK_MENU_WIFI:
                 KeySystemSeq_Push(seq, DataConvert_SeqWifi);
-                *state = 0;
+                *state = MENU_SEQ_START_SCENE;
                 break;
             case LINK_MENU_MEMORIES:
                 (*state)++;
@@ -200,12 +209,39 @@ void DataConvert_SeqMenu(KeySystemSeq *seq, int *state, void *work) {
             }
         }
         break;
-    case 4:
+    case MENU_SEQ_END:
         KeySystemBG_StartFade(wk->bg, KEY_SYSTEM_BG_FADE_0_TO_2, 30);
         KeySystemSeq_Pop(seq);
         break;
     }
 }
+
+enum {
+    WIRELESS_SEQ_CHECK_WIRELESS,
+    WIRELESS_SEQ_PRINT_START_PROMPT,
+    WIRELESS_SEQ_WAIT_START_PROMPT_PRINT,
+    WIRELESS_SEQ_WAIT_START_MENU_PRINT,
+    WIRELESS_SEQ_WAIT_START_ANSWER,
+    WIRELESS_SEQ_START_LINK_SCENE,
+    WIRELESS_SEQ_REQUEST_DISTRIBUTE,
+    WIRELESS_SEQ_WAIT_DISTRIBUTE,
+    WIRELESS_SEQ_DISTRIBUTE_FAILED,
+    WIRELESS_SEQ_REQUEST_RECEIVE,
+    WIRELESS_SEQ_WAIT_RECEIVE,
+    WIRELESS_SEQ_CHECK_RECEIVED,
+    WIRELESS_SEQ_CHECK_MERGE,
+    WIRELESS_SEQ_PRINT_MERGE_PROMPT,
+    WIRELESS_SEQ_WAIT_MERGE_PROMPT_PRINT,
+    WIRELESS_SEQ_WAIT_MERGE_ANSWER,
+    WIRELESS_SEQ_MERGE,
+    WIRELESS_SEQ_SAVE,
+    WIRELESS_SEQ_PRINT_MERGE_RESULT,
+    WIRELESS_SEQ_PRINT_DECLINED,
+    WIRELESS_SEQ_WAIT_RESULT_PRINT,
+    WIRELESS_SEQ_WAIT_ERROR_PRINT,
+    WIRELESS_SEQ_END_SCENE,
+    WIRELESS_SEQ_END,
+};
 
 static void DataConvert_SeqWireless(KeySystemSeq *seq, int *state, void *work) {
     KeySystemWork *wk = work;
@@ -214,33 +250,33 @@ static void DataConvert_SeqWireless(KeySystemSeq *seq, int *state, void *work) {
     StrBuf *str;
 
     switch (*state) {
-    case 0:
+    case WIRELESS_SEQ_CHECK_WIRELESS:
         if (isWirelessEnabled()) {
-            *state = 1;
+            *state = WIRELESS_SEQ_PRINT_START_PROMPT;
         } else {
             KeySystemSeq_Push(seq, KeySystem_SeqWirelessOff);
-            *state = 23;
+            *state = WIRELESS_SEQ_END;
         }
         break;
-    case 1:
+    case WIRELESS_SEQ_PRINT_START_PROMPT:
         KeySystem_CreateMsgWin(wk, HEAPID_KEY_SYSTEM);
         GFL_BGSysQueueScrLoad(0);
         KeySystemMsgWin_PrintMsg(wk->msgWin, wk->msgData, 128, KEY_SYSTEM_MSG_STREAM);
         (*state)++;
         break;
-    case 2:
+    case WIRELESS_SEQ_WAIT_START_PROMPT_PRINT:
         if (KeySystemMsgWin_IsDone(wk->msgWin)) {
             KeySystem_CreateYesNoMenu(wk, HEAPID_KEY_SYSTEM);
             (*state)++;
         }
         break;
-    case 3:
+    case WIRELESS_SEQ_WAIT_START_MENU_PRINT:
         if (KeySystemMenu_UpdatePrint(wk->menu)) {
             GFL_BGSysQueueScrLoad(0);
             (*state)++;
         }
         break;
-    case 4:
+    case WIRELESS_SEQ_WAIT_START_ANSWER:
         result = KeySystemMenu_Update(wk->menu);
         if (result == BMPMENULIST_NULL) {
             break;
@@ -248,16 +284,16 @@ static void DataConvert_SeqWireless(KeySystemSeq *seq, int *state, void *work) {
         KeySystem_FreeMenu(wk);
         KeySystem_FreeMsgWin(wk);
         switch (result) {
-        case 0:
+        case KEY_SYSTEM_YES_NO_YES:
             (*state)++;
             break;
-        case 1:
+        case KEY_SYSTEM_YES_NO_NO:
         default:
-            *state = 23;
+            *state = WIRELESS_SEQ_END;
             break;
         }
         break;
-    case 5:
+    case WIRELESS_SEQ_START_LINK_SCENE:
         KeySystemNet_SetMode(wk->net, KEY_SYSTEM_NET_MODE_OV181);
         wk->wbData = NULL;
         hasSave = SaveControl_IsDataAlreadyPresent(GameData_GetSaveControl(wk->param->gameData));
@@ -286,7 +322,7 @@ static void DataConvert_SeqWireless(KeySystemSeq *seq, int *state, void *work) {
         KeySystemSeq_Push(seq, DataConvert_SeqStartLinkScene);
         (*state)++;
         break;
-    case 6: {
+    case WIRELESS_SEQ_REQUEST_DISTRIBUTE: {
         KeySystemNetOv181Start start = { NULL, NULL, 0 };
 
         start.text = wk->msgStrs[0];
@@ -295,19 +331,19 @@ static void DataConvert_SeqWireless(KeySystemSeq *seq, int *state, void *work) {
         (*state)++;
         break;
     }
-    case 7:
+    case WIRELESS_SEQ_WAIT_DISTRIBUTE:
         if (KeySystemNet_GetState(wk->net) == KEY_SYSTEM_NET_STATE_IDLE) {
-            if (KeySystemNet_GetRequest(wk->net)->ov181.result == 1) {
-                *state = 9;
+            if (KeySystemNet_GetRequest(wk->net)->ov181.result == KEY_SYSTEM_OV181_START_DONE) {
+                *state = WIRELESS_SEQ_REQUEST_RECEIVE;
             } else {
-                *state = 8;
+                *state = WIRELESS_SEQ_DISTRIBUTE_FAILED;
             }
         }
         break;
-    case 8:
-        *state = 22;
+    case WIRELESS_SEQ_DISTRIBUTE_FAILED:
+        *state = WIRELESS_SEQ_END_SCENE;
         break;
-    case 9:
+    case WIRELESS_SEQ_REQUEST_RECEIVE:
         KeySystemMsgWin_PrintMsg(wk->msgWin, wk->msgData, 126, KEY_SYSTEM_MSG_PRINT_WAIT_ICON);
         {
             KeySystemNetOv181End end = { FALSE, 0, NULL };
@@ -316,53 +352,53 @@ static void DataConvert_SeqWireless(KeySystemSeq *seq, int *state, void *work) {
         }
         (*state)++;
         break;
-    case 10:
+    case WIRELESS_SEQ_WAIT_RECEIVE:
         if (KeySystemNet_GetState(wk->net) == KEY_SYSTEM_NET_STATE_IDLE) {
             (*state)++;
         }
         break;
-    case 11: {
+    case WIRELESS_SEQ_CHECK_RECEIVED: {
         KeySystemNetRequest *request = KeySystemNet_GetRequest(wk->net);
 
         switch (request->ov181End.result) {
-        case 0:
+        case MB_DATACONV_RESULT_OK:
             wk->wbData = request->ov181End.data;
-            *state = 12;
+            *state = WIRELESS_SEQ_CHECK_MERGE;
             break;
-        case 1:
+        case MB_DATACONV_RESULT_TIMEOUT:
             KeySystemMsgWin_PrintMsg(wk->msgWin, wk->msgData, 127, KEY_SYSTEM_MSG_STREAM);
-            *state = 21;
+            *state = WIRELESS_SEQ_WAIT_ERROR_PRINT;
             break;
-        case 3:
+        case MB_DATACONV_RESULT_CHILD_ERROR_2:
             KeySystemMsgWin_PrintMsg(wk->msgWin, wk->msgData, 130, KEY_SYSTEM_MSG_STREAM);
-            *state = 21;
+            *state = WIRELESS_SEQ_WAIT_ERROR_PRINT;
             break;
-        case 2:
-        case 4:
+        case MB_DATACONV_RESULT_CHILD_ERROR_1:
+        case MB_DATACONV_RESULT_CHILD_ERROR_3:
         default:
             KeySystemMsgWin_PrintMsg(wk->msgWin, wk->msgData, 129, KEY_SYSTEM_MSG_STREAM);
-            *state = 21;
+            *state = WIRELESS_SEQ_WAIT_ERROR_PRINT;
             break;
         }
         break;
     }
-    case 12:
+    case WIRELESS_SEQ_CHECK_MERGE:
         if (MemoryLinkSave_CanMerge(wk->memoryLink, wk->wbData, GameData_GetSaveControl(wk->param->gameData))) {
-            *state = 16;
+            *state = WIRELESS_SEQ_MERGE;
         } else {
-            *state = 13;
+            *state = WIRELESS_SEQ_PRINT_MERGE_PROMPT;
         }
         break;
-    case 13:
+    case WIRELESS_SEQ_PRINT_MERGE_PROMPT:
         KeySystemMsgWin_Free(wk->msgWin);
         wk->msgWin = KeySystemMsgWin_Create(0, 2, 4, 28, 12, 14, wk->font, HEAPID_KEY_SYSTEM);
         KeySystemMsgWin_SetColor(wk->msgWin, PRINT_COLOR(1, 2, 15));
         KeySystemMsgWin_DrawFrame(wk->msgWin, 1, 15);
         GFL_BGSysQueueScrLoad(0);
         KeySystemMsgWin_PrintMsg(wk->msgWin, wk->msgData, 132, KEY_SYSTEM_MSG_STREAM);
-        *state = 14;
+        *state = WIRELESS_SEQ_WAIT_MERGE_PROMPT_PRINT;
         break;
-    case 14:
+    case WIRELESS_SEQ_WAIT_MERGE_PROMPT_PRINT:
         if (KeySystemMsgWin_IsDone(wk->msgWin)) {
             KeySystemMenuSetup setup;
 
@@ -385,7 +421,7 @@ static void DataConvert_SeqWireless(KeySystemSeq *seq, int *state, void *work) {
             (*state)++;
         }
         break;
-    case 15:
+    case WIRELESS_SEQ_WAIT_MERGE_ANSWER:
         result = KeySystemMenu_Update(wk->menu);
         if (result == BMPMENULIST_NULL) {
             break;
@@ -393,56 +429,102 @@ static void DataConvert_SeqWireless(KeySystemSeq *seq, int *state, void *work) {
         KeySystemMenu_Free(wk->menu);
         wk->menu = NULL;
         switch (result) {
-        case 0:
+        case KEY_SYSTEM_YES_NO_YES:
             (*state)++;
             break;
-        case 1:
+        case KEY_SYSTEM_YES_NO_NO:
         default:
-            *state = 19;
+            *state = WIRELESS_SEQ_PRINT_DECLINED;
             break;
         }
         break;
-    case 16:
+    case WIRELESS_SEQ_MERGE:
         wk->transferResult =
             MemoryLinkSave_Merge(wk->memoryLink, wk->wbData, GameData_GetSaveControl(wk->param->gameData));
         (*state)++;
         break;
-    case 17:
+    case WIRELESS_SEQ_SAVE:
         KeySystemSeq_Push(seq, DataConvert_SeqSave);
         (*state)++;
         break;
-    case 18:
+    case WIRELESS_SEQ_PRINT_MERGE_RESULT:
         if (wk->transferResult) {
             KeySystemMsgWin_PrintMsg(wk->msgWin, wk->msgData, 138, KEY_SYSTEM_MSG_STREAM_FAST);
         } else {
             KeySystemMsgWin_PrintMsg(wk->msgWin, wk->msgData, 131, KEY_SYSTEM_MSG_STREAM_FAST);
         }
-        *state = 20;
+        *state = WIRELESS_SEQ_WAIT_RESULT_PRINT;
         break;
-    case 19:
+    case WIRELESS_SEQ_PRINT_DECLINED:
         KeySystemMsgWin_PrintMsg(wk->msgWin, wk->msgData, 133, KEY_SYSTEM_MSG_STREAM_FAST);
-        *state = 20;
+        *state = WIRELESS_SEQ_WAIT_RESULT_PRINT;
         break;
-    case 20:
+    case WIRELESS_SEQ_WAIT_RESULT_PRINT:
         if (KeySystemMsgWin_IsDone(wk->msgWin)) {
-            *state = 22;
+            *state = WIRELESS_SEQ_END_SCENE;
         }
         break;
-    case 21:
+    case WIRELESS_SEQ_WAIT_ERROR_PRINT:
         if (KeySystemMsgWin_IsDone(wk->msgWin)) {
-            *state = 22;
+            *state = WIRELESS_SEQ_END_SCENE;
         }
         break;
-    case 22:
+    case WIRELESS_SEQ_END_SCENE:
         KeySystemSeq_Push(seq, KeySystem_SeqEndScene);
         KeySystemNet_SetMode(wk->net, KEY_SYSTEM_NET_MODE_NONE);
         (*state)++;
         break;
-    case 23:
+    case WIRELESS_SEQ_END:
         KeySystemSeq_Pop(seq);
         break;
     }
 }
+
+enum {
+    WIFI_SEQ_FADE_OUT,
+    WIFI_SEQ_AFTER_FADE_OUT,
+    WIFI_SEQ_LOGIN,
+    WIFI_SEQ_START_SCENE,
+    WIFI_SEQ_FADE_IN,
+    WIFI_SEQ_CHECK_LOGIN,
+    WIFI_SEQ_PRINT_CONNECTING,
+    WIFI_SEQ_AFTER_CONNECTING_PRINT,
+    WIFI_SEQ_REQUEST_STATUS,
+    WIFI_SEQ_WAIT_STATUS,
+    WIFI_SEQ_PRINT_ENTER_ID,
+    WIFI_SEQ_WAIT_ENTER_ID_PRINT,
+    WIFI_SEQ_FADE_OUT_ENTRY,
+    WIFI_SEQ_END_SCENE_ENTRY,
+    WIFI_SEQ_ENTER_ID,
+    WIFI_SEQ_START_WIFI_SCENE,
+    WIFI_SEQ_FADE_IN_ENTRY,
+    WIFI_SEQ_CHECK_ID,
+    WIFI_SEQ_REQUEST_DOWNLOAD,
+    WIFI_SEQ_WAIT_DOWNLOAD,
+    WIFI_SEQ_CONVERT_SAVE,
+    WIFI_SEQ_CHECK_MERGE,
+    WIFI_SEQ_PRINT_MERGE_PROMPT,
+    WIFI_SEQ_WAIT_MERGE_PROMPT_PRINT,
+    WIFI_SEQ_WAIT_MERGE_ANSWER,
+    WIFI_SEQ_MERGE,
+    WIFI_SEQ_SAVE,
+    WIFI_SEQ_PRINT_MERGE_RESULT,
+    WIFI_SEQ_PRINT_RETRY_ENTRY,
+    WIFI_SEQ_WAIT_RETRY_PRINT,
+    WIFI_SEQ_PRINT_DECLINED,
+    WIFI_SEQ_PRINT_ERROR_RETRY_ENTRY,
+    WIFI_SEQ_PRINT_ERROR_END,
+    WIFI_SEQ_WAIT_END_PRINT,
+    WIFI_SEQ_FADE_OUT_EXIT,
+    WIFI_SEQ_END_SCENE,
+    WIFI_SEQ_LOGOUT,
+    WIFI_SEQ_START_MENU_SCENE,
+    WIFI_SEQ_FADE_IN_MENU,
+    WIFI_SEQ_AFTER_FADE_IN,
+    WIFI_SEQ_END,
+    WIFI_SEQ_PRINT_UNAVAILABLE,
+    WIFI_SEQ_WAIT_UNAVAILABLE_PRINT,
+};
 
 static void DataConvert_SeqWifi(KeySystemSeq *seq, int *state, void *work) {
     KeySystemWork *wk = work;
@@ -451,18 +533,18 @@ static void DataConvert_SeqWifi(KeySystemSeq *seq, int *state, void *work) {
     const u16 *chars;
 
     switch (*state) {
-    case 0:
+    case WIFI_SEQ_FADE_OUT:
         KeySystemSeq_Push(seq, KeySystem_SeqFadeOut);
         (*state)++;
         break;
-    case 1:
+    case WIFI_SEQ_AFTER_FADE_OUT:
         (*state)++;
         break;
-    case 2:
+    case WIFI_SEQ_LOGIN:
         KeySystemSeq_Push(seq, DataConvert_SeqWifiLogin);
         (*state)++;
         break;
-    case 3:
+    case WIFI_SEQ_START_SCENE:
         if (wk->loggedIn) {
             wk->transferResult = FALSE;
             KeySystemNet_SetBuffer(wk->net, wk->loginBuffer);
@@ -473,45 +555,45 @@ static void DataConvert_SeqWifi(KeySystemSeq *seq, int *state, void *work) {
         }
         (*state)++;
         break;
-    case 4:
+    case WIFI_SEQ_FADE_IN:
         KeySystemSeq_Push(seq, KeySystem_SeqFadeIn);
         (*state)++;
         break;
-    case 5:
+    case WIFI_SEQ_CHECK_LOGIN:
         if (wk->loggedIn) {
-            *state = 10;
+            *state = WIFI_SEQ_PRINT_ENTER_ID;
         } else {
-            *state = 40;
+            *state = WIFI_SEQ_END;
         }
         break;
     // Nothing goes to states 6 to 9
-    case 6:
+    case WIFI_SEQ_PRINT_CONNECTING:
         KeySystemMsgWin_PrintMsg(wk->msgWin, wk->msgData, 141, KEY_SYSTEM_MSG_PRINT_WAIT_ICON);
         (*state)++;
         break;
-    case 7:
+    case WIFI_SEQ_AFTER_CONNECTING_PRINT:
         (*state)++;
         break;
-    case 8: {
+    case WIFI_SEQ_REQUEST_STATUS: {
         KeySystemNetWifiGet get = { 0, 0 };
 
         KeySystemNet_Request(wk->net, KEY_SYSTEM_NET_REQUEST_WIFI_GET, &get);
         (*state)++;
         break;
     }
-    case 9:
+    case WIFI_SEQ_WAIT_STATUS:
         if (KeySystemNet_GetState(wk->net) == KEY_SYSTEM_NET_STATE_IDLE) {
             KeySystemNetRequest *request = KeySystemNet_GetRequest(wk->net);
 
             switch (request->wifiGet.result) {
-            case 2:
-            case 3:
+            case KEY_SYSTEM_NET_RESULT_HTTP_ERROR:
+            case KEY_SYSTEM_NET_RESULT_SERVER_ERROR:
                 GFL_NetErrShowScreen();
-                *state = 40;
+                *state = WIFI_SEQ_END;
                 break;
             default:
                 if (request->wifiGet.value == 4) {
-                    *state = 41;
+                    *state = WIFI_SEQ_PRINT_UNAVAILABLE;
                 } else {
                     (*state)++;
                 }
@@ -519,46 +601,46 @@ static void DataConvert_SeqWifi(KeySystemSeq *seq, int *state, void *work) {
             }
         }
         break;
-    case 10:
+    case WIFI_SEQ_PRINT_ENTER_ID:
         KeySystemMsgWin_PrintMsg(wk->msgWin, wk->msgData, 134, KEY_SYSTEM_MSG_STREAM);
         (*state)++;
         break;
-    case 11:
+    case WIFI_SEQ_WAIT_ENTER_ID_PRINT:
         if (KeySystemMsgWin_IsDone(wk->msgWin)) {
             KeySystemNet_SetNoErrorCheck(wk->net, TRUE);
             (*state)++;
         }
         break;
-    case 12:
+    case WIFI_SEQ_FADE_OUT_ENTRY:
         KeySystemSeq_Push(seq, KeySystem_SeqFadeOut);
         (*state)++;
         break;
-    case 13:
+    case WIFI_SEQ_END_SCENE_ENTRY:
         KeySystemSeq_Push(seq, KeySystem_SeqEndScene);
         (*state)++;
         break;
-    case 14:
+    case WIFI_SEQ_ENTER_ID:
         KeySystemSeq_Push(seq, DataConvert_SeqEnterId);
         (*state)++;
         break;
-    case 15:
+    case WIFI_SEQ_START_WIFI_SCENE:
         KeySystemSeq_Push(seq, DataConvert_SeqStartWifiScene);
         (*state)++;
         break;
-    case 16:
+    case WIFI_SEQ_FADE_IN_ENTRY:
         KeySystemSeq_Push(seq, KeySystem_SeqFadeIn);
         (*state)++;
         break;
-    case 17:
+    case WIFI_SEQ_CHECK_ID:
         KeySystemNet_SetNoErrorCheck(wk->net, FALSE);
         if (wk->enteredCode == NULL) {
-            *state = 30;
+            *state = WIFI_SEQ_PRINT_DECLINED;
             break;
         }
         wk->wbSave = GFL_HeapAllocate(HEAPID_USER, WB_SAVE_SIZE, TRUE, "data_convert_flow.c", 849);
-        *state = 18;
+        *state = WIFI_SEQ_REQUEST_DOWNLOAD;
         break;
-    case 18:
+    case WIFI_SEQ_REQUEST_DOWNLOAD:
         KeySystemMsgWin_PrintMsg(wk->msgWin, wk->msgData, 137, KEY_SYSTEM_MSG_PRINT_WAIT_ICON);
         {
             KeySystemNetWifiPost post = { 0, 0, NULL, 0 };
@@ -585,41 +667,41 @@ static void DataConvert_SeqWifi(KeySystemSeq *seq, int *state, void *work) {
         }
         (*state)++;
         break;
-    case 19:
+    case WIFI_SEQ_WAIT_DOWNLOAD:
         if (KeySystemNet_GetState(wk->net) == KEY_SYSTEM_NET_STATE_IDLE) {
             switch (KeySystemNet_GetRequest(wk->net)->wifi.result) {
-            case 0:
-            case 1:
+            case KEY_SYSTEM_NET_RESULT_PENDING:
+            case KEY_SYSTEM_NET_RESULT_FAILED:
                 break;
-            case 2:
-            case 3:
+            case KEY_SYSTEM_NET_RESULT_HTTP_ERROR:
+            case KEY_SYSTEM_NET_RESULT_SERVER_ERROR:
                 GFL_NetErrShowScreen();
-                *state = 40;
+                *state = WIFI_SEQ_END;
                 break;
-            case 4:
-                *state = 20;
+            case KEY_SYSTEM_NET_RESULT_OK:
+                *state = WIFI_SEQ_CONVERT_SAVE;
                 break;
             case 5:
                 if (wk->wbSave != NULL) {
                     GFL_HeapFree(wk->wbSave);
                     wk->wbSave = NULL;
                 }
-                *state = 31;
+                *state = WIFI_SEQ_PRINT_ERROR_RETRY_ENTRY;
                 break;
             case 6:
                 if (wk->wbSave != NULL) {
                     GFL_HeapFree(wk->wbSave);
                     wk->wbSave = NULL;
                 }
-                *state = 28;
+                *state = WIFI_SEQ_PRINT_RETRY_ENTRY;
                 break;
             case 7:
-                *state = 32;
+                *state = WIFI_SEQ_PRINT_ERROR_END;
                 break;
             }
         }
         break;
-    case 20:
+    case WIFI_SEQ_CONVERT_SAVE:
         if (wk->wbData != NULL) {
             GFL_HeapFree(wk->wbData);
         }
@@ -628,23 +710,23 @@ static void DataConvert_SeqWifi(KeySystemSeq *seq, int *state, void *work) {
         wk->wbSave = NULL;
         (*state)++;
         break;
-    case 21:
+    case WIFI_SEQ_CHECK_MERGE:
         if (MemoryLinkSave_CanMerge(wk->memoryLink, wk->wbData, GameData_GetSaveControl(wk->param->gameData))) {
-            *state = 25;
+            *state = WIFI_SEQ_MERGE;
         } else {
-            *state = 22;
+            *state = WIFI_SEQ_PRINT_MERGE_PROMPT;
         }
         break;
-    case 22:
+    case WIFI_SEQ_PRINT_MERGE_PROMPT:
         KeySystemMsgWin_Free(wk->msgWin);
         wk->msgWin = KeySystemMsgWin_Create(0, 2, 4, 28, 12, 14, wk->font, HEAPID_KEY_SYSTEM);
         KeySystemMsgWin_SetColor(wk->msgWin, PRINT_COLOR(1, 2, 15));
         KeySystemMsgWin_DrawFrame(wk->msgWin, 1, 15);
         GFL_BGSysQueueScrLoad(0);
         KeySystemMsgWin_PrintMsg(wk->msgWin, wk->msgData, 132, KEY_SYSTEM_MSG_STREAM);
-        *state = 23;
+        *state = WIFI_SEQ_WAIT_MERGE_PROMPT_PRINT;
         break;
-    case 23:
+    case WIFI_SEQ_WAIT_MERGE_PROMPT_PRINT:
         if (KeySystemMsgWin_IsDone(wk->msgWin)) {
             KeySystemMenuSetup setup;
 
@@ -667,7 +749,7 @@ static void DataConvert_SeqWifi(KeySystemSeq *seq, int *state, void *work) {
             (*state)++;
         }
         break;
-    case 24:
+    case WIFI_SEQ_WAIT_MERGE_ANSWER:
         result = KeySystemMenu_Update(wk->menu);
         if (result == BMPMENULIST_NULL) {
             break;
@@ -675,59 +757,59 @@ static void DataConvert_SeqWifi(KeySystemSeq *seq, int *state, void *work) {
         KeySystemMenu_Free(wk->menu);
         wk->menu = NULL;
         switch (result) {
-        case 0:
+        case KEY_SYSTEM_YES_NO_YES:
             (*state)++;
             break;
-        case 1:
+        case KEY_SYSTEM_YES_NO_NO:
         default:
-            *state = 30;
+            *state = WIFI_SEQ_PRINT_DECLINED;
             break;
         }
         break;
-    case 25:
+    case WIFI_SEQ_MERGE:
         wk->transferResult =
             MemoryLinkSave_Merge(wk->memoryLink, wk->wbData, GameData_GetSaveControl(wk->param->gameData));
         (*state)++;
         break;
-    case 26:
+    case WIFI_SEQ_SAVE:
         KeySystemSeq_Push(seq, DataConvert_SeqSave);
         (*state)++;
         break;
-    case 27:
+    case WIFI_SEQ_PRINT_MERGE_RESULT:
         if (wk->transferResult) {
             KeySystemMsgWin_PrintMsg(wk->msgWin, wk->msgData, 138, KEY_SYSTEM_MSG_STREAM_FAST);
         } else {
             KeySystemMsgWin_PrintMsg(wk->msgWin, wk->msgData, 131, KEY_SYSTEM_MSG_STREAM_FAST);
         }
-        *state = 33;
+        *state = WIFI_SEQ_WAIT_END_PRINT;
         break;
-    case 28:
+    case WIFI_SEQ_PRINT_RETRY_ENTRY:
         KeySystemMsgWin_PrintMsg(wk->msgWin, wk->msgData, 135, KEY_SYSTEM_MSG_STREAM);
-        *state = 29;
+        *state = WIFI_SEQ_WAIT_RETRY_PRINT;
         break;
-    case 29:
+    case WIFI_SEQ_WAIT_RETRY_PRINT:
         if (KeySystemMsgWin_IsDone(wk->msgWin)) {
-            *state = 10;
+            *state = WIFI_SEQ_PRINT_ENTER_ID;
         }
         break;
-    case 30:
+    case WIFI_SEQ_PRINT_DECLINED:
         KeySystemMsgWin_PrintMsg(wk->msgWin, wk->msgData, 133, KEY_SYSTEM_MSG_STREAM);
-        *state = 33;
+        *state = WIFI_SEQ_WAIT_END_PRINT;
         break;
-    case 31:
+    case WIFI_SEQ_PRINT_ERROR_RETRY_ENTRY:
         KeySystemMsgWin_PrintMsg(wk->msgWin, wk->msgData, 143, KEY_SYSTEM_MSG_STREAM);
-        *state = 29;
+        *state = WIFI_SEQ_WAIT_RETRY_PRINT;
         break;
-    case 32:
+    case WIFI_SEQ_PRINT_ERROR_END:
         KeySystemMsgWin_PrintMsg(wk->msgWin, wk->msgData, 142, KEY_SYSTEM_MSG_STREAM);
-        *state = 33;
+        *state = WIFI_SEQ_WAIT_END_PRINT;
         break;
-    case 33:
+    case WIFI_SEQ_WAIT_END_PRINT:
         if (KeySystemMsgWin_IsDone(wk->msgWin)) {
-            *state = 34;
+            *state = WIFI_SEQ_FADE_OUT_EXIT;
         }
         break;
-    case 34:
+    case WIFI_SEQ_FADE_OUT_EXIT:
         KeySystemNet_SetMode(wk->net, KEY_SYSTEM_NET_MODE_NONE);
         if (wk->wbSave != NULL) {
             GFL_HeapFree(wk->wbSave);
@@ -736,60 +818,71 @@ static void DataConvert_SeqWifi(KeySystemSeq *seq, int *state, void *work) {
         KeySystemSeq_Push(seq, KeySystem_SeqFadeOut);
         (*state)++;
         break;
-    case 35:
+    case WIFI_SEQ_END_SCENE:
         KeySystemSeq_Push(seq, KeySystem_SeqEndScene);
         (*state)++;
         break;
-    case 36:
+    case WIFI_SEQ_LOGOUT:
         KeySystemSeq_Push(seq, DataConvert_SeqWifiLogout);
         (*state)++;
         break;
-    case 37:
+    case WIFI_SEQ_START_MENU_SCENE:
         KeySystemSeq_Push(seq, DataConvert_SeqStartMenuScene);
         (*state)++;
         break;
-    case 38:
+    case WIFI_SEQ_FADE_IN_MENU:
         KeySystemSeq_Push(seq, KeySystem_SeqFadeIn);
         (*state)++;
         break;
-    case 39:
+    case WIFI_SEQ_AFTER_FADE_IN:
         (*state)++;
         break;
-    case 40:
+    case WIFI_SEQ_END:
         KeySystemSeq_Pop(seq);
         break;
-    case 41:
+    case WIFI_SEQ_PRINT_UNAVAILABLE:
         KeySystemMsgWin_PrintMsg(wk->msgWin, wk->msgData, 140, KEY_SYSTEM_MSG_STREAM);
         // BUG: The message starts again every frame, and the next state is never reached. It never shows, since nothing
         // goes to states 6 to 9, which lead here
 #ifdef BUGFIX
-        *state = 42;
+        *state = WIFI_SEQ_WAIT_UNAVAILABLE_PRINT;
 #else
-        *state = 41;
+        *state = WIFI_SEQ_PRINT_UNAVAILABLE;
 #endif
         break;
-    case 42:
+    case WIFI_SEQ_WAIT_UNAVAILABLE_PRINT:
         if (KeySystemMsgWin_IsDone(wk->msgWin)) {
-            *state = 40;
+            *state = WIFI_SEQ_END;
         }
         break;
     }
 }
 
+enum {
+    SAVE_SEQ_PRINT_SAVING,
+    SAVE_SEQ_WAIT_SAVING_PRINT,
+    SAVE_SEQ_START_SAVE,
+    SAVE_SEQ_PLAY_SE,
+    SAVE_SEQ_PAUSE,
+    SAVE_SEQ_PRINT_SAVED,
+    SAVE_SEQ_WAIT_SAVED_PRINT,
+    SAVE_SEQ_END,
+};
+
 static void DataConvert_SeqSave(KeySystemSeq *seq, int *state, void *work) {
     KeySystemWork *wk = work;
 
     switch (*state) {
-    case 0:
+    case SAVE_SEQ_PRINT_SAVING:
         KeySystemMsgWin_PrintMsg(wk->msgWin, wk->msgData, 29, KEY_SYSTEM_MSG_PRINT_WAIT_ICON);
         (*state)++;
         break;
-    case 1:
+    case SAVE_SEQ_WAIT_SAVING_PRINT:
         if (KeySystemMsgWin_IsDone(wk->msgWin)) {
             (*state)++;
         }
         break;
-    case 2:
+    case SAVE_SEQ_START_SAVE:
         if (DataConvert_NeedsGameSave(wk)) {
             KeySystemSeq_Push(seq, DataConvert_SeqSaveBoth);
         } else {
@@ -797,93 +890,121 @@ static void DataConvert_SeqSave(KeySystemSeq *seq, int *state, void *work) {
         }
         (*state)++;
         break;
-    case 3:
+    case SAVE_SEQ_PLAY_SE:
         GFL_SndSEPlay(SEQ_SE_SAVE);
-        *state = 4;
+        *state = SAVE_SEQ_PAUSE;
         break;
-    case 4:
-        *state = 5;
+    case SAVE_SEQ_PAUSE:
+        *state = SAVE_SEQ_PRINT_SAVED;
         break;
-    case 5:
+    case SAVE_SEQ_PRINT_SAVED:
         KeySystemMsgWin_PrintMsg(wk->msgWin, wk->msgData, 56, KEY_SYSTEM_MSG_STREAM_FAST);
-        *state = 6;
+        *state = SAVE_SEQ_WAIT_SAVED_PRINT;
         break;
-    case 6:
+    case SAVE_SEQ_WAIT_SAVED_PRINT:
         if (KeySystemMsgWin_IsDone(wk->msgWin) && !GFL_SndPlayerIsActiveAny()) {
-            *state = 7;
+            *state = SAVE_SEQ_END;
         }
         break;
-    case 7:
+    case SAVE_SEQ_END:
         KeySystemSeq_Pop(seq);
         break;
     }
 }
+
+enum {
+    SAVE_OTHER_SEQ_START_SAVE,
+    SAVE_OTHER_SEQ_WAIT_SAVE,
+    SAVE_OTHER_SEQ_WAIT_DELAY,
+    SAVE_OTHER_SEQ_END,
+};
 
 // Writes ov331's save, which holds the Memory Link
 static void DataConvert_SeqSaveOther(KeySystemSeq *seq, int *state, void *work) {
     KeySystemWork *wk = work;
 
     switch (*state) {
-    case 0:
+    case SAVE_OTHER_SEQ_START_SAVE:
         SaveOutside_StartSave(wk->ov331Work);
         wk->timer = 0;
         (*state)++;
         break;
-    case 1:
+    case SAVE_OTHER_SEQ_WAIT_SAVE:
         wk->timer++;
         if (SaveOutside_Save(wk->ov331Work)) {
             (*state)++;
         }
         break;
-    case 2:
+    case SAVE_OTHER_SEQ_WAIT_DELAY:
         if (wk->timer++ > 60) {
             wk->timer = 0;
             (*state)++;
         }
         break;
-    case 3:
+    case SAVE_OTHER_SEQ_END:
         KeySystemSeq_Pop(seq);
         break;
     }
 }
+
+enum {
+    SAVE_GAME_SEQ_START_SAVE,
+    SAVE_GAME_SEQ_WAIT_SAVE,
+    SAVE_GAME_SEQ_PAUSE,
+    SAVE_GAME_SEQ_END,
+};
 
 static void DataConvert_SeqSaveGame(KeySystemSeq *seq, int *state, void *work) {
     KeySystemWork *wk = work;
 
     switch (*state) {
-    case 0:
+    case SAVE_GAME_SEQ_START_SAVE:
         GameData_StartSave(wk->param->gameData);
         (*state)++;
         break;
-    case 1:
+    case SAVE_GAME_SEQ_WAIT_SAVE:
         if (GameData_UpdateSave(wk->param->gameData) == 2) {
             (*state)++;
         }
         break;
-    case 2:
+    case SAVE_GAME_SEQ_PAUSE:
         (*state)++;
         break;
-    case 3:
+    case SAVE_GAME_SEQ_END:
         KeySystemSeq_Pop(seq);
         break;
     }
 }
 
+enum {
+    SAVE_BOTH_SEQ_SAVE_GAME,
+    SAVE_BOTH_SEQ_SAVE_OTHER,
+    SAVE_BOTH_SEQ_END,
+};
+
 static void DataConvert_SeqSaveBoth(KeySystemSeq *seq, int *state, void *work) {
     switch (*state) {
-    case 0:
+    case SAVE_BOTH_SEQ_SAVE_GAME:
         KeySystemSeq_Push(seq, DataConvert_SeqSaveGame);
         (*state)++;
         break;
-    case 1:
+    case SAVE_BOTH_SEQ_SAVE_OTHER:
         KeySystemSeq_Push(seq, DataConvert_SeqSaveOther);
         (*state)++;
         break;
-    case 2:
+    case SAVE_BOTH_SEQ_END:
         KeySystemSeq_Pop(seq);
         break;
     }
 }
+
+enum {
+    MEMORY_LIST_SEQ_START_SCENE,
+    MEMORY_LIST_SEQ_WAIT_CHOICE,
+    MEMORY_LIST_SEQ_END_SCENE,
+    MEMORY_LIST_SEQ_RUN_CHOICE,
+    MEMORY_LIST_SEQ_END,
+};
 
 static void DataConvert_SeqMemoryList(KeySystemSeq *seq, int *state, void *work) {
     KeySystemWork *wk = work;
@@ -891,11 +1012,11 @@ static void DataConvert_SeqMemoryList(KeySystemSeq *seq, int *state, void *work)
     u32 top;
 
     switch (*state) {
-    case 0:
+    case MEMORY_LIST_SEQ_START_SCENE:
         KeySystemSeq_Push(seq, DataConvert_SeqStartMemoryListScene);
         (*state)++;
         break;
-    case 1:
+    case MEMORY_LIST_SEQ_WAIT_CHOICE:
         wk->choice = KeySystemScrollList_Update(wk->scrollList);
         if (wk->choice == (u32)-1) {
             break;
@@ -907,65 +1028,79 @@ static void DataConvert_SeqMemoryList(KeySystemSeq *seq, int *state, void *work)
         }
         (*state)++;
         break;
-    case 2:
+    case MEMORY_LIST_SEQ_END_SCENE:
         KeySystemSeq_Push(seq, KeySystem_SeqEndScene);
         (*state)++;
         break;
-    case 3:
+    case MEMORY_LIST_SEQ_RUN_CHOICE:
         if (wk->choice == MEMORY_LIST_BACK) {
             (*state)++;
         } else {
             KeySystemSeq_Push(seq, DataConvert_SeqMemoryInfo);
-            *state = 0;
+            *state = MEMORY_LIST_SEQ_START_SCENE;
         }
         break;
-    case 4:
+    case MEMORY_LIST_SEQ_END:
         KeySystemSeq_Pop(seq);
         break;
     }
 }
+
+enum {
+    MEMORY_INFO_SEQ_START_SCENE,
+    MEMORY_INFO_SEQ_PRINT,
+    MEMORY_INFO_SEQ_WAIT_PRINT,
+    MEMORY_INFO_SEQ_END_SCENE,
+    MEMORY_INFO_SEQ_END,
+};
 
 static void DataConvert_SeqMemoryInfo(KeySystemSeq *seq, int *state, void *work) {
     KeySystemWork *wk = work;
 
     switch (*state) {
-    case 0:
+    case MEMORY_INFO_SEQ_START_SCENE:
         KeySystemSeq_Push(seq, DataConvert_SeqStartMsgScene);
         (*state)++;
         break;
-    case 1:
+    case MEMORY_INFO_SEQ_PRINT:
         KeySystemMsgWin_PrintMsg(wk->msgWin, wk->msgData, wk->choice + 153, KEY_SYSTEM_MSG_STREAM);
         (*state)++;
         break;
-    case 2:
+    case MEMORY_INFO_SEQ_WAIT_PRINT:
         if (KeySystemMsgWin_IsDone(wk->msgWin)) {
             (*state)++;
         }
         break;
-    case 3:
+    case MEMORY_INFO_SEQ_END_SCENE:
         KeySystemSeq_Push(seq, KeySystem_SeqEndScene);
         (*state)++;
         break;
-    case 4:
+    case MEMORY_INFO_SEQ_END:
         KeySystemSeq_Pop(seq);
         break;
     }
 }
 
+enum {
+    SCENE_SEQ_START,
+    SCENE_SEQ_WAIT_IDLE,
+    SCENE_SEQ_END,
+};
+
 static void DataConvert_SeqStartMenuScene(KeySystemSeq *seq, int *state, void *work) {
     KeySystemWork *wk = work;
 
     switch (*state) {
-    case 0:
+    case SCENE_SEQ_START:
         KeySystemScene_Start(wk->scene, &sDataConvertMenuSceneFuncs, HEAPID_KEY_SYSTEM);
         (*state)++;
         break;
-    case 1:
+    case SCENE_SEQ_WAIT_IDLE:
         if (KeySystemScene_IsIdle(wk->scene)) {
             (*state)++;
         }
         break;
-    case 2:
+    case SCENE_SEQ_END:
         KeySystemSeq_Pop(seq);
         break;
     }
@@ -975,16 +1110,16 @@ static void DataConvert_SeqStartLinkScene(KeySystemSeq *seq, int *state, void *w
     KeySystemWork *wk = work;
 
     switch (*state) {
-    case 0:
+    case SCENE_SEQ_START:
         KeySystemScene_Start(wk->scene, &sDataConvertLinkSceneFuncs, HEAPID_KEY_SYSTEM);
         (*state)++;
         break;
-    case 1:
+    case SCENE_SEQ_WAIT_IDLE:
         if (KeySystemScene_IsIdle(wk->scene)) {
             (*state)++;
         }
         break;
-    case 2:
+    case SCENE_SEQ_END:
         KeySystemSeq_Pop(seq);
         break;
     }
@@ -994,16 +1129,16 @@ static void DataConvert_SeqStartWifiScene(KeySystemSeq *seq, int *state, void *w
     KeySystemWork *wk = work;
 
     switch (*state) {
-    case 0:
+    case SCENE_SEQ_START:
         KeySystemScene_Start(wk->scene, &sDataConvertWifiSceneFuncs, HEAPID_KEY_SYSTEM);
         (*state)++;
         break;
-    case 1:
+    case SCENE_SEQ_WAIT_IDLE:
         if (KeySystemScene_IsIdle(wk->scene)) {
             (*state)++;
         }
         break;
-    case 2:
+    case SCENE_SEQ_END:
         KeySystemSeq_Pop(seq);
         break;
     }
@@ -1013,16 +1148,16 @@ static void DataConvert_SeqStartMemoryListScene(KeySystemSeq *seq, int *state, v
     KeySystemWork *wk = work;
 
     switch (*state) {
-    case 0:
+    case SCENE_SEQ_START:
         KeySystemScene_Start(wk->scene, &sDataConvertMemoryListSceneFuncs, HEAPID_KEY_SYSTEM);
         (*state)++;
         break;
-    case 1:
+    case SCENE_SEQ_WAIT_IDLE:
         if (KeySystemScene_IsIdle(wk->scene)) {
             (*state)++;
         }
         break;
-    case 2:
+    case SCENE_SEQ_END:
         KeySystemSeq_Pop(seq);
         break;
     }
@@ -1032,20 +1167,27 @@ static void DataConvert_SeqStartMsgScene(KeySystemSeq *seq, int *state, void *wo
     KeySystemWork *wk = work;
 
     switch (*state) {
-    case 0:
+    case SCENE_SEQ_START:
         KeySystemScene_Start(wk->scene, &sDataConvertMsgSceneFuncs, HEAPID_KEY_SYSTEM);
         (*state)++;
         break;
-    case 1:
+    case SCENE_SEQ_WAIT_IDLE:
         if (KeySystemScene_IsIdle(wk->scene)) {
             (*state)++;
         }
         break;
-    case 2:
+    case SCENE_SEQ_END:
         KeySystemSeq_Pop(seq);
         break;
     }
 }
+
+enum {
+    SUBPROC_SEQ_START,
+    SUBPROC_SEQ_WAIT_PROC,
+    SUBPROC_SEQ_FINISH,
+    SUBPROC_SEQ_END,
+};
 
 // Unova Link frees its graphics while the login runs, and sets them up again after
 static void DataConvert_SeqWifiLogin(KeySystemSeq *seq, int *state, void *work) {
@@ -1053,7 +1195,7 @@ static void DataConvert_SeqWifiLogin(KeySystemSeq *seq, int *state, void *work) 
     WifiLoginParam *param;
 
     switch (*state) {
-    case 0:
+    case SUBPROC_SEQ_START:
         KeySystem_Teardown(wk, FALSE);
         param = GFL_HeapAllocate(HEAPID_KEY_SYSTEM, sizeof(WifiLoginParam), TRUE, "data_convert_flow.c", 1705);
         param->gameData = wk->param->gameData;
@@ -1071,10 +1213,10 @@ static void DataConvert_SeqWifiLogin(KeySystemSeq *seq, int *state, void *work) 
         GCTX_ProcMgrQueueProc(OVERLAY_ID(190), &WIFILOGIN_PROC_FUNCTIONS, param);
         (*state)++;
         break;
-    case 1:
+    case SUBPROC_SEQ_WAIT_PROC:
         (*state)++;
         break;
-    case 2:
+    case SUBPROC_SEQ_FINISH:
         if (((WifiLoginParam *)wk->subProcParam)->result == 0) {
             wk->loggedIn = TRUE;
         } else {
@@ -1088,7 +1230,7 @@ static void DataConvert_SeqWifiLogin(KeySystemSeq *seq, int *state, void *work) 
         GFL_NetSetIconScreen(TRUE, HEAPID_KEY_SYSTEM);
         (*state)++;
         break;
-    case 3:
+    case SUBPROC_SEQ_END:
         KeySystemSeq_Pop(seq);
         break;
     }
@@ -1099,7 +1241,7 @@ static void DataConvert_SeqWifiLogout(KeySystemSeq *seq, int *state, void *work)
     WifiLogoutParam *param;
 
     switch (*state) {
-    case 0:
+    case SUBPROC_SEQ_START:
         KeySystem_Teardown(wk, FALSE);
         param = GFL_HeapAllocate(HEAPID_KEY_SYSTEM, sizeof(WifiLogoutParam), TRUE, "data_convert_flow.c", 1789);
         param->gameData = wk->param->gameData;
@@ -1111,10 +1253,10 @@ static void DataConvert_SeqWifiLogout(KeySystemSeq *seq, int *state, void *work)
         GCTX_ProcMgrQueueProc(OVERLAY_ID(190), &WIFILOGOUT_PROC_FUNCTIONS, param);
         (*state)++;
         break;
-    case 1:
+    case SUBPROC_SEQ_WAIT_PROC:
         (*state)++;
         break;
-    case 2:
+    case SUBPROC_SEQ_FINISH:
         GFL_HeapFree(wk->subProcParam);
         wk->subProcParam = NULL;
         KeySystem_Setup(wk, HEAPID_KEY_SYSTEM);
@@ -1122,7 +1264,7 @@ static void DataConvert_SeqWifiLogout(KeySystemSeq *seq, int *state, void *work)
         KeySystemBG_StartFade(wk->bg, KEY_SYSTEM_BG_FADE_2_TO_0, 1);
         (*state)++;
         break;
-    case 3:
+    case SUBPROC_SEQ_END:
         KeySystemSeq_Pop(seq);
         break;
     }
@@ -1134,7 +1276,7 @@ static void DataConvert_SeqEnterId(KeySystemSeq *seq, int *state, void *work) {
     NameEntryParam *param;
 
     switch (*state) {
-    case 0:
+    case SUBPROC_SEQ_START:
         KeySystem_Teardown(wk, TRUE);
         param = GFL_HeapAllocate(HEAPID_KEY_SYSTEM, sizeof(NameEntryParam), TRUE, "data_convert_flow.c", 1848);
         param->mode = NAME_ENTRY_GAME_SYNC_ID;
@@ -1145,10 +1287,10 @@ static void DataConvert_SeqEnterId(KeySystemSeq *seq, int *state, void *work) {
         GCTX_ProcMgrQueueProc(OVERLAY_ID(280), &NAME_ENTRY_PROC_FUNCTIONS, param);
         (*state)++;
         break;
-    case 1:
+    case SUBPROC_SEQ_WAIT_PROC:
         (*state)++;
         break;
-    case 2:
+    case SUBPROC_SEQ_FINISH:
         param = wk->subProcParam;
         if (param->canceled) {
             if (wk->enteredCode != NULL) {
@@ -1170,7 +1312,7 @@ static void DataConvert_SeqEnterId(KeySystemSeq *seq, int *state, void *work) {
         GFL_NetSetIconScreen(TRUE, HEAPID_KEY_SYSTEM);
         (*state)++;
         break;
-    case 3:
+    case SUBPROC_SEQ_END:
         KeySystemSeq_Pop(seq);
         break;
     }
@@ -1354,10 +1496,10 @@ static void DataConvert_MemoryListSceneInit(void *work, HeapID heapId) {
     setup.count++;
     setup.bg = 1;
     setup.palette = 1;
-    setup.unkA8 = 10;
+    setup.tileOffset = 10;
     if (KeySystemTags_Has(wk->tags, "DI1")) {
         setup.cursor = KeySystemTags_Get(wk->tags, "DI1");
-        setup.unkAC = KeySystemTags_Get(wk->tags, "DI2");
+        setup.top = KeySystemTags_Get(wk->tags, "DI2");
         KeySystemTags_Remove(wk->tags, "DI1");
         KeySystemTags_Remove(wk->tags, "DI2");
     }

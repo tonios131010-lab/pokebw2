@@ -335,6 +335,11 @@ void KeySystem_FreeTitleWin(KeySystemWork *wk);
 void KeySystem_CreateTitleWin(KeySystemWork *wk, u8 width, HeapID heapId);
 void KeySystem_CreateInfoWin(KeySystemWork *wk, HeapID heapId);
 void KeySystem_FreeInfoWin(KeySystemWork *wk);
+// What the menu of KeySystem_CreateYesNoMenu returns
+enum {
+    KEY_SYSTEM_YES_NO_YES,
+    KEY_SYSTEM_YES_NO_NO,
+};
 void KeySystem_CreateYesNoMenu(KeySystemWork *wk, HeapID heapId);
 void KeySystem_FreeMenu(KeySystemWork *wk);
 void KeySystem_SeqTop(KeySystemSeq *seq, int *state, void *work);
@@ -396,9 +401,9 @@ typedef struct {
     int count;
     u16 bg;
     u16 palette;
-    u16 unkA8;
+    u16 tileOffset;
     u16 cursor;
-    u16 unkAC;
+    u16 top;
 } KeySystemScrollListSetup;
 
 KeySystemMsgWin *KeySystemMsgWin_Create(u16 bg, u16 x, u16 y, u16 width, u16 height, u16 palette, Font *font,
@@ -542,6 +547,27 @@ typedef struct {
     void *arg;
     void (*func)(void *arg);
 } KeySystemNetCallback;
+
+// The results of KEY_SYSTEM_NET_REQUEST_OV181_START
+enum {
+    KEY_SYSTEM_OV181_START_PENDING,
+    // The other system took the program
+    KEY_SYSTEM_OV181_START_DONE,
+    // The player pressed B
+    KEY_SYSTEM_OV181_START_CANCELED,
+};
+
+// The results of KEY_SYSTEM_NET_REQUEST_WIFI_POST and KEY_SYSTEM_NET_REQUEST_WIFI_GET
+enum {
+    KEY_SYSTEM_NET_RESULT_PENDING,
+    // The request could not start or ended without an answer
+    KEY_SYSTEM_NET_RESULT_FAILED,
+    // The server answered with an HTTP error, such as 502 or 503
+    KEY_SYSTEM_NET_RESULT_HTTP_ERROR,
+    // The server's reply holds an error code
+    KEY_SYSTEM_NET_RESULT_SERVER_ERROR,
+    KEY_SYSTEM_NET_RESULT_OK,
+};
 
 // The parameters of KEY_SYSTEM_NET_REQUEST_OV181_START, the texts that the other system shows, and its result
 typedef struct {

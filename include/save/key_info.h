@@ -58,6 +58,13 @@ MemoryLinkSave *KeySystemData_GetMemoryLink(KeySystemData *data);
 void KeySystemData_Init(KeySystemData *data);
 void KeyInfoSave_Copy(KeyInfoSave *dest, const KeyInfoSave *src);
 
+// The chambers, which KeyInfo_GetChamberKey returns, by the key that opens each one
+enum {
+    KEY_INFO_CHAMBER_NONE,
+    KEY_INFO_CHAMBER_IRON,
+    KEY_INFO_CHAMBER_ICEBERG,
+};
+
 // The difficulties, which GetGameDifficulty returns
 enum {
     GAME_DIFFICULTY_EASY,

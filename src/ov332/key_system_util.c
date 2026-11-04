@@ -591,6 +591,12 @@ void KeySystemList_Free(KeySystemList *list) {
     GFL_HeapFree(list);
 }
 
+enum {
+    LIST_STATE_CHOOSING,
+    LIST_STATE_BLINKING,
+    LIST_STATE_DECIDED,
+};
+
 void KeySystemList_Update(KeySystemList *list) {
     BOOL moved = FALSE;
     BOOL decided;
@@ -601,7 +607,7 @@ void KeySystemList_Update(KeySystemList *list) {
 
     list->changed = FALSE;
     switch (list->state) {
-    case 0:
+    case LIST_STATE_CHOOSING:
         repeat = GCTX_HIDGetTypedKeys();
         pressed = GCTX_HIDGetPressedKeys();
         decided = FALSE;
@@ -660,7 +666,7 @@ void KeySystemList_Update(KeySystemList *list) {
             list->timer = 0;
         }
         break;
-    case 1:
+    case LIST_STATE_BLINKING:
         if ((list->timer / 4) % 2) {
             palette = list->setup.palette + 1;
         } else {
@@ -673,7 +679,7 @@ void KeySystemList_Update(KeySystemList *list) {
             list->state++;
         }
         break;
-    case 2:
+    case LIST_STATE_DECIDED:
         list->decided = TRUE;
         break;
     }
@@ -1038,7 +1044,7 @@ KeySystemScrollList *KeySystemScrollList_Create(const KeySystemScrollListSetup *
     list->list = FrameList_Create(&listSetup, heapId);
     FrameList_SetKeyMask(list->list, 193);
     arc = GFL_ArcSysCreateFileHandle(ARCID_KEY_SYSTEM, heapId);
-    FrameList_LoadScreenPalette(list->list, arc, 12, FALSE, 0, setup->unkA8, setup->palette);
+    FrameList_LoadScreenPalette(list->list, arc, 12, FALSE, 0, setup->tileOffset, setup->palette);
     FrameList_LoadCursorPalette(list->list, arc, 1, 1, 2);
     GFL_ArcToolFree(arc);
     for (i = 0; i < setup->count; i++) {
@@ -1076,7 +1082,7 @@ BOOL KeySystemScrollList_Start(KeySystemScrollList *list) {
     if (!FrameList_Draw(list->list)) {
         FrameList_SetCursor(list->list, list->setup.cursor);
         if (FrameList_CanScrollDown(list->list)) {
-            FrameList_ScrollBlocking(list->list, list->setup.unkAC);
+            FrameList_ScrollBlocking(list->list, list->setup.top);
         }
         list->started = TRUE;
         return TRUE;

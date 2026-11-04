@@ -427,10 +427,10 @@ void CygnusFlow_SeqMenu(KeySystemSeq *seq, int *state, void *work) {
         }
         KeySystem_FreeMenu(wk);
         switch (result) {
-        case 0:
+        case KEY_SYSTEM_YES_NO_YES:
             *state = MENU_SEQ_END_MENU_SCENE;
             break;
-        case 1:
+        case KEY_SYSTEM_YES_NO_NO:
         default:
             *state = MENU_SEQ_END_SCENE;
             break;
