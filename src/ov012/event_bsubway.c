@@ -78,13 +78,13 @@ typedef struct {
 typedef struct {
     GameData *gameData;
     BtlSetup *setup;
-    void *unk08;
+    void *encounterWork;
 } BSubwayCommBattleParam;
 
 typedef struct {
     GameSystem *gsys;
     BtlSetup *setup;
-    void *unk08;
+    void *encounterWork;
     BSubwayCommBattleParam param;
     u8 unk18[0x24];
 } BSubwayCommBattleData;
@@ -93,7 +93,7 @@ typedef struct {
     GameSystem *gsys;
     Field *field;
     BtlSetup *setup;
-    void *unk0C;
+    void *encounterWork;
 } BSubwayBattleData;
 
 typedef struct {
@@ -116,29 +116,38 @@ static const GameProcFunctions BSUBWAY_COMM_BATTLE_PROC_FUNCTIONS = {
 
 static GameEvent *EventBSubwayCommBattle_CreateFromScrWork(BSubwayScrWork *bsw, GameSystem *gsys, Field *field);
 
+typedef enum {
+    BSUBWAY_POKE_SELECT_STEP_FADE_OUT,
+    BSUBWAY_POKE_SELECT_STEP_CLOSE_FIELD,
+    BSUBWAY_POKE_SELECT_STEP_POKE_LIST,
+    BSUBWAY_POKE_SELECT_STEP_OPEN_FIELD,
+    BSUBWAY_POKE_SELECT_STEP_FADE_IN,
+    BSUBWAY_POKE_SELECT_STEP_DONE,
+} BSubwayPokeSelectStep;
+
 static GameEventReturnCode EventBSubwayPokeSelect_Callback(GameEvent *event, u32 *state, void *work) {
     BSubwayPokeSelectData *data = work;
     GameSystem *gsys = data->gsys;
 
     switch (*state) {
-    case 0:
+    case BSUBWAY_POKE_SELECT_STEP_FADE_OUT:
         GameEvent_ChainNext(
             event, CallFieldMapEntranceOutTransitionDefault(gsys, data->field, FIELD_TRANSITION_FADE_BLACK, 0));
         (*state)++;
         break;
-    case 1:
+    case BSUBWAY_POKE_SELECT_STEP_CLOSE_FIELD:
         GameEvent_ChainNext(event, CreateFieldCloseEvent(gsys, data->field));
         (*state)++;
         break;
-    case 2:
+    case BSUBWAY_POKE_SELECT_STEP_POKE_LIST:
         GameEvent_ChainNext(event, EventPokeList_Create(gsys, data->field, &data->partyParam, &data->summaryParam));
         (*state)++;
         break;
-    case 3:
+    case BSUBWAY_POKE_SELECT_STEP_OPEN_FIELD:
         GameEvent_ChainNext(event, EventFieldOpen_CreateHeadless(gsys));
         (*state)++;
         break;
-    case 4:
+    case BSUBWAY_POKE_SELECT_STEP_FADE_IN:
         GameEvent_ChainNext(
             event, CallFieldMapEntranceInTransition(gsys, data->field, FIELD_TRANSITION_FADE_BLACK, 0, 1, 0, 0));
         MI_CpuCopy8(data->partyParam.picked, data->picked, sizeof(data->partyParam.picked));
@@ -147,7 +156,7 @@ static GameEventReturnCode EventBSubwayPokeSelect_Callback(GameEvent *event, u32
         GFL_HeapFree(data->partyParam.regulation);
         (*state)++;
         break;
-    case 5:
+    case BSUBWAY_POKE_SELECT_STEP_DONE:
         return GAMEEVENT_DONE;
     }
     return GAMEEVENT_CONTINUE;
@@ -224,17 +233,23 @@ GameEvent *EventBSubwayBattle_Create(BSubwayScrWork *bsw, GameSystem *gsys, Fiel
     return EventBSubwayBattleCall_Create(gsys, field, bsw->btlSetup);
 }
 
+typedef enum {
+    BSUBWAY_MSG_STEP_PRINT,
+    BSUBWAY_MSG_STEP_WAIT_KEY,
+    BSUBWAY_MSG_STEP_WAIT_CLOSE,
+} BSubwayMsgStep;
+
 static GameEventReturnCode EventBSubwayTrainerMsg_Callback(GameEvent *event, u32 *state, void *work) {
     BSubwayTrainerMsgData *data = work;
 
     switch (*state) {
-    case 0:
+    case BSUBWAY_MSG_STEP_PRINT:
         if (!MsgBGPrinter_TalkWinMain(data->msgWin)) {
             break;
         }
         (*state)++;
         // fallthrough
-    case 1:
+    case BSUBWAY_MSG_STEP_WAIT_KEY:
         MsgBGPrinter_TalkWinDrawCursor(data->msgWin);
         if (GCTX_HIDGetPressedKeys() & (PAD_BUTTON_A | PAD_BUTTON_B)) {
             GFL_SndSEPlay(SEQ_SE_MESSAGE);
@@ -242,7 +257,7 @@ static GameEventReturnCode EventBSubwayTrainerMsg_Callback(GameEvent *event, u32
             (*state)++;
         }
         break;
-    case 2:
+    case BSUBWAY_MSG_STEP_WAIT_CLOSE:
         if (MsgBGPrinter_WaitTalkWinClose(data->msgWin) == TRUE) {
             GFL_StrBufFree(data->strbuf);
             return GAMEEVENT_DONE;
@@ -298,12 +313,17 @@ GameEvent *EventBSubwayTrainerMsg_Create(BSubwayScrWork *bsw, GameSystem *gsys, 
     return event;
 }
 
+typedef enum {
+    BSUBWAY_RECORDS_STEP_START_PROC,
+    BSUBWAY_RECORDS_STEP_DONE,
+} BSubwayRecordsStep;
+
 static GameEventReturnCode EventBSubwayRecords_Callback(GameEvent *event, u32 *state, void *work) {
     BSubwayRecordsData *data = work;
     void *bsubwaySave;
 
     switch (*state) {
-    case 0:
+    case BSUBWAY_RECORDS_STEP_START_PROC:
         data->param.gameData = GSYS_GetGameData(data->gsys);
         bsubwaySave = GameData_GetBSubwayWifiData(data->param.gameData);
         data->param.rank = BSubwayWifiData_GetLeaderRank(bsubwaySave);
@@ -313,7 +333,7 @@ static GameEventReturnCode EventBSubwayRecords_Callback(GameEvent *event, u32 *s
                                                                   &BSUBWAY_RECORDS_PROC_FUNCTIONS, &data->param));
         (*state)++;
         break;
-    case 1:
+    case BSUBWAY_RECORDS_STEP_DONE:
         return GAMEEVENT_DONE;
     }
     return GAMEEVENT_CONTINUE;
@@ -347,44 +367,58 @@ static BOOL BSubwayCommBattleProc_Exit(GameProc *proc, u32 *state, void *param, 
     return TRUE;
 }
 
+typedef enum {
+    BSUBWAY_COMM_BATTLE_PROC_STEP_LOAD_OVERLAY,
+    BSUBWAY_COMM_BATTLE_PROC_STEP_WAIT_TIMING,
+    BSUBWAY_COMM_BATTLE_PROC_STEP_START_BATTLE,
+    BSUBWAY_COMM_BATTLE_PROC_STEP_WAIT_BATTLE,
+    BSUBWAY_COMM_BATTLE_PROC_STEP_UNLOAD,
+    BSUBWAY_COMM_BATTLE_PROC_STEP_DONE,
+} BSubwayCommBattleProcStep;
+
 static BOOL BSubwayCommBattleProc_Main(GameProc *proc, u32 *state, void *param, void *work) {
     BSubwayCommBattleParam *battleParam = param;
     BSubwayCommBattleWork *procWork = work;
     BOOL running = GFL_ProcMgrUpdate(procWork->procManager);
 
     switch (*state) {
-    case 0:
+    case BSUBWAY_COMM_BATTLE_PROC_STEP_LOAD_OVERLAY:
         GFL_OvlLoad(OVERLAY_ID(167));
         NetCommand_AddTable(0x100, BTL_NET_COMMANDS, 9, NULL);
         GFL_NetSendTiming(NetHandle_GetOwn(), BSUBWAY_COMM_TIMING_BATTLE);
-        *state = 1;
+        *state = BSUBWAY_COMM_BATTLE_PROC_STEP_WAIT_TIMING;
         break;
-    case 1:
+    case BSUBWAY_COMM_BATTLE_PROC_STEP_WAIT_TIMING:
         if (GFL_NetErrCheck()) {
-            *state = 4;
+            *state = BSUBWAY_COMM_BATTLE_PROC_STEP_UNLOAD;
         } else if (GFL_NetIsTimingRecv(NetHandle_GetOwn(), BSUBWAY_COMM_TIMING_BATTLE)) {
-            *state = 2;
+            *state = BSUBWAY_COMM_BATTLE_PROC_STEP_START_BATTLE;
         }
         break;
-    case 2:
+    case BSUBWAY_COMM_BATTLE_PROC_STEP_START_BATTLE:
         QueueGameProc(procWork->procManager, -1, &BATTLE_PROC_FUNCTIONS, battleParam->setup);
-        *state = 3;
+        *state = BSUBWAY_COMM_BATTLE_PROC_STEP_WAIT_BATTLE;
         break;
-    case 3:
+    case BSUBWAY_COMM_BATTLE_PROC_STEP_WAIT_BATTLE:
         if (running != TRUE) {
-            *state = 4;
+            *state = BSUBWAY_COMM_BATTLE_PROC_STEP_UNLOAD;
         }
         break;
-    case 4:
+    case BSUBWAY_COMM_BATTLE_PROC_STEP_UNLOAD:
         NetCommand_RemoveTable(0x100);
         GFL_OvlUnload(OVERLAY_ID(167));
-        *state = 5;
+        *state = BSUBWAY_COMM_BATTLE_PROC_STEP_DONE;
         break;
-    case 5:
+    case BSUBWAY_COMM_BATTLE_PROC_STEP_DONE:
         return TRUE;
     }
     return FALSE;
 }
+
+typedef enum {
+    BSUBWAY_COMM_BATTLE_EVENT_STEP_START_PROC,
+    BSUBWAY_COMM_BATTLE_EVENT_STEP_WAIT_PROC,
+} BSubwayCommBattleEventStep;
 
 static GameEventReturnCode EventBSubwayCommBattleProc_Callback(GameEvent *event, u32 *state, void *work) {
     BSubwayCommBattleData *data = work;
@@ -392,15 +426,15 @@ static GameEventReturnCode EventBSubwayCommBattleProc_Callback(GameEvent *event,
     BSubwayCommBattleParam *param;
 
     switch (*state) {
-    case 0:
+    case BSUBWAY_COMM_BATTLE_EVENT_STEP_START_PROC:
         param = &data->param;
         data->param.gameData = GSYS_GetGameData(gsys);
         param->setup = data->setup;
-        param->unk08 = data->unk08;
+        param->encounterWork = data->encounterWork;
         GSYS_QueueProc(gsys, -1, &BSUBWAY_COMM_BATTLE_PROC_FUNCTIONS, param);
         (*state)++;
         break;
-    case 1:
+    case BSUBWAY_COMM_BATTLE_EVENT_STEP_WAIT_PROC:
         if (GSYS_GetProcMgrState(gsys) == FALSE) {
             return GAMEEVENT_DONE;
         }
@@ -409,15 +443,28 @@ static GameEventReturnCode EventBSubwayCommBattleProc_Callback(GameEvent *event,
     return GAMEEVENT_CONTINUE;
 }
 
-static GameEvent *EventBSubwayCommBattleProc_Create(GameSystem *gsys, BtlSetup *setup, void *a2) {
+static GameEvent *EventBSubwayCommBattleProc_Create(GameSystem *gsys, BtlSetup *setup, void *encounterWork) {
     GameEvent *event = GameEvent_Create(gsys, NULL, EventBSubwayCommBattleProc_Callback, sizeof(BSubwayCommBattleData));
     BSubwayCommBattleData *data = GameEvent_GetData(event);
 
     data->gsys = gsys;
     data->setup = setup;
-    data->unk08 = a2;
+    data->encounterWork = encounterWork;
     return event;
 }
+
+typedef enum {
+    BSUBWAY_COMM_BATTLE_STEP_PREPARE_ACTORS,
+    BSUBWAY_COMM_BATTLE_STEP_PLAY_BGM,
+    BSUBWAY_COMM_BATTLE_STEP_ENCOUNT_EFFECT,
+    BSUBWAY_COMM_BATTLE_STEP_CLOSE_FIELD,
+    BSUBWAY_COMM_BATTLE_STEP_BATTLE,
+    BSUBWAY_COMM_BATTLE_STEP_FADE_POP_BGM,
+    BSUBWAY_COMM_BATTLE_STEP_OPEN_FIELD,
+    BSUBWAY_COMM_BATTLE_STEP_WAIT_BGM,
+    BSUBWAY_COMM_BATTLE_STEP_FADE_IN,
+    BSUBWAY_COMM_BATTLE_STEP_DONE,
+} BSubwayCommBattleStep;
 
 static GameEventReturnCode EventBSubwayCommBattle_Callback(GameEvent *event, u32 *state, void *work) {
     BSubwayBattleData *data = work;
@@ -425,45 +472,45 @@ static GameEventReturnCode EventBSubwayCommBattle_Callback(GameEvent *event, u32
     Field *field = data->field;
 
     switch (*state) {
-    case 0:
+    case BSUBWAY_COMM_BATTLE_STEP_PREPARE_ACTORS:
         GameEvent_ChainNext(event, CallEventPrepareResidentActorsForZoneChange(gsys, field));
         (*state)++;
         break;
-    case 1:
+    case BSUBWAY_COMM_BATTLE_STEP_PLAY_BGM:
         GameEvent_ChainNext(event, EventBattleBGMPlay_Create(gsys, data->setup->fieldSituation.bgm));
         (*state)++;
         break;
-    case 2:
+    case BSUBWAY_COMM_BATTLE_STEP_ENCOUNT_EFFECT:
         EffectEncount_ConsumeSpot(Field_GetEncountSystem(field));
         EncEff_StartEvent(Field_GetEncEff(data->field), event, 9);
         (*state)++;
         break;
-    case 3:
+    case BSUBWAY_COMM_BATTLE_STEP_CLOSE_FIELD:
         GameEvent_ChainNext(event, CreateFieldCloseEvent(gsys, field));
         (*state)++;
         break;
-    case 4:
-        GameEvent_ChainNext(event, EventBSubwayCommBattleProc_Create(gsys, data->setup, data->unk0C));
+    case BSUBWAY_COMM_BATTLE_STEP_BATTLE:
+        GameEvent_ChainNext(event, EventBSubwayCommBattleProc_Create(gsys, data->setup, data->encounterWork));
         (*state)++;
         break;
-    case 5:
+    case BSUBWAY_COMM_BATTLE_STEP_FADE_POP_BGM:
         GameEvent_ChainNext(event, EventBGMFadePop_Create(gsys));
         (*state)++;
         break;
-    case 6:
+    case BSUBWAY_COMM_BATTLE_STEP_OPEN_FIELD:
         GameEvent_ChainNext(event, EventFieldOpen_CreateHeadless(gsys));
         (*state)++;
         break;
-    case 7:
+    case BSUBWAY_COMM_BATTLE_STEP_WAIT_BGM:
         GameEvent_ChainNext(event, EventBGMFadeWait_Create(gsys));
         (*state)++;
         break;
-    case 8:
+    case BSUBWAY_COMM_BATTLE_STEP_FADE_IN:
         GameEvent_ChainNext(event,
                             CallFieldMapEntranceInTransition(gsys, field, FIELD_TRANSITION_FADE_BLACK, 0, 1, 0, 0));
         (*state)++;
         break;
-    case 9:
+    case BSUBWAY_COMM_BATTLE_STEP_DONE:
         return GAMEEVENT_DONE;
     default:
         return GAMEEVENT_DONE;
@@ -471,13 +518,13 @@ static GameEventReturnCode EventBSubwayCommBattle_Callback(GameEvent *event, u32
     return GAMEEVENT_CONTINUE;
 }
 
-static GameEvent *EventBSubwayCommBattle_Create(GameSystem *gsys, Field *field, BtlSetup *setup, void *a3) {
+static GameEvent *EventBSubwayCommBattle_Create(GameSystem *gsys, Field *field, BtlSetup *setup, void *encounterWork) {
     GameEvent *event = GameEvent_Create(gsys, NULL, EventBSubwayCommBattle_Callback, sizeof(BSubwayBattleData));
     BSubwayBattleData *data = GameEvent_GetData(event);
 
     data->gsys = gsys;
     data->setup = setup;
-    data->unk0C = a3;
+    data->encounterWork = encounterWork;
     data->field = field;
     return event;
 }
@@ -490,18 +537,18 @@ static GameEventReturnCode EventBSubwayLeaderMsg_Callback(GameEvent *event, u32 
     BSubwayLeaderMsgData *data = work;
 
     switch (*state) {
-    case 0:
+    case BSUBWAY_MSG_STEP_PRINT:
         if (MsgBGPrinter_TalkWinMain(data->msgWin) == TRUE) {
             (*state)++;
         }
         break;
-    case 1:
+    case BSUBWAY_MSG_STEP_WAIT_KEY:
         if (GCTX_HIDGetPressedKeys() & (PAD_BUTTON_A | PAD_BUTTON_B)) {
             MsgBGPrinter_DeleteTalkWin(data->msgWin);
             (*state)++;
         }
         break;
-    case 2:
+    case BSUBWAY_MSG_STEP_WAIT_CLOSE:
         if (MsgBGPrinter_WaitTalkWinClose(data->msgWin) == TRUE) {
             GFL_StrBufFree(data->strbuf);
             return GAMEEVENT_DONE;
