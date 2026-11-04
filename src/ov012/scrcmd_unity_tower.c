@@ -33,13 +33,19 @@ static u8 UnityTowerState_GetTrainerClass(const UnityTowerFloor *state, u8 index
     return state->trainerClasses[index];
 }
 
+typedef enum {
+    UNITY_TOWER_STATE_PARAM_COUNT,
+    UNITY_TOWER_STATE_PARAM_FLOOR,
+    UNITY_TOWER_STATE_PARAM_VALUE,
+} UnityTowerStateParam;
+
 static u8 UnityTowerState_GetParam(const UnityTowerFloor *state, u16 param) {
     switch (param) {
-    case 0:
+    case UNITY_TOWER_STATE_PARAM_COUNT:
         return state->count;
-    case 1:
+    case UNITY_TOWER_STATE_PARAM_FLOOR:
         return state->floor;
-    case 2:
+    case UNITY_TOWER_STATE_PARAM_VALUE:
         return state->value;
     }
     return 0;
@@ -81,15 +87,20 @@ static GameEvent *EventUnityTowerFloorSelect_Create(GameSystem *gsys, u16 floor,
     return event;
 }
 
+typedef enum {
+    UNITY_TOWER_FLOOR_SELECT_STEP_START_SELECT,
+    UNITY_TOWER_FLOOR_SELECT_STEP_STORE_RESULT,
+} UnityTowerFloorSelectStep;
+
 static GameEventReturnCode EventUnityTowerFloorSelect_Callback(GameEvent *event, u32 *state, void *data) {
     UnityTowerFloorSelectEvent *work = GameEvent_GetData(event);
 
     switch (*state) {
-    case 0:
+    case UNITY_TOWER_FLOOR_SELECT_STEP_START_SELECT:
         GSYS_QueueProcAsEvent(event, OVERLAY_UN_SELECT, &UN_SELECT_PROC_FUNCTIONS, &work->param);
         (*state)++;
         break;
-    case 1:
+    case UNITY_TOWER_FLOOR_SELECT_STEP_STORE_RESULT:
         if (work->param.selected == TRUE) {
             *work->selectedResult = TRUE;
             *work->floorResult = work->param.selectedFloor;
