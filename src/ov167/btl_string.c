@@ -104,16 +104,36 @@ static const BtlStringHandler sHandlers[] = {
 
 static BtlStringWork sWork;
 
+// The commands of a message's word sets, which pick what a word names
+enum {
+    WORD_CMD_TRAINER_NAME,
+    WORD_CMD_SPECIES_NAME,
+    WORD_CMD_NICKNAME,
+    WORD_CMD_TYPE,
+    WORD_CMD_ABILITY_NAME = 6,
+    WORD_CMD_MOVE_NAME,
+    WORD_CMD_ITEM_NAME = 9,
+    WORD_CMD_TRUE_NICKNAME = 12,
+    WORD_CMD_TRAINER_CLASS_NAME = 14,
+};
+
+// The variants of GetMonVariant
+enum {
+    MON_VARIANT_PLAYER,
+    MON_VARIANT_WILD,
+    MON_VARIANT_FOE,
+};
+
 // Which variant of a message names a Pokémon: 0 for the player's side, 1 for a wild Pokémon, 2 for a foe's
 static inline int GetMonVariant(u8 monId) {
     if (sWork.unk68 == 0 && AreClientsOnOppositeSides(sWork.mainModule, sWork.clientId, GetClientIDFromMonID(monId))) {
         if (BtlSetup_GetBattleType(sWork.mainModule) == BTL_TYPE_WILD ||
             BtlSetup_GetBattleType(sWork.mainModule) == BTL_TYPE_CAPTURE_DEMO) {
-            return 1;
+            return MON_VARIANT_WILD;
         }
-        return 2;
+        return MON_VARIANT_FOE;
     }
-    return 0;
+    return MON_VARIANT_PLAYER;
 }
 
 // The message file of a studio movie's script, one for each of the player's sexes
@@ -133,7 +153,7 @@ static inline void LoadMovieMsgData(BtlMainModule *mainModule, u32 mode, HeapID 
         sWork.msgData[9] =
             GFL_MsgSysLoadData(FALSE, 2, GetMovieScriptMsgFile(GetStudioMovieId(mainModule), male), heapId);
         if (mode == BTL_STUDIO_MODE_FILM) {
-            sWork.msgData[10] = GFL_MsgSysLoadData(FALSE, 2, sMovieMsgFiles[rules->unk08], heapId);
+            sWork.msgData[10] = GFL_MsgSysLoadData(FALSE, 2, sMovieMsgFiles[rules->msgFile], heapId);
         }
     }
 }
@@ -206,7 +226,7 @@ static void SetTrainerClassName(WordSet *wordSet, u8 index, u8 clientId) {
 static void SetTrainerName(WordSet *wordSet, u8 index, u8 clientId) {
     u32 trainerClass;
 
-    if (clientId != 4) {
+    if (clientId != BTL_CLIENT_ID_NONE) {
         if (IsClientNPCTrainer(sWork.mainModule, clientId)) {
             StrBuf *name = GetClientTrainerName(sWork.mainModule, clientId, &trainerClass);
             GFL_WordSetSetStrbuf(wordSet, index, name, TrainerClass_GetSex(trainerClass), 1, 2);
@@ -303,9 +323,9 @@ static u8 CountMonNames(const StrBuf *strbuf) {
         str = FindNextWordSetCommand(str, &category, &index, &param);
         if (str != NULL && category == STRCMD_CATEGORY_WORD) {
             switch (index) {
-            case 1:
-            case 2:
-            case 12:
+            case WORD_CMD_SPECIES_NAME:
+            case WORD_CMD_NICKNAME:
+            case WORD_CMD_TRUE_NICKNAME:
                 count++;
                 break;
             }
@@ -335,7 +355,7 @@ static void RegisterArgWords(StrBuf *strbuf, const u32 *args, WordSet *wordSet) 
             if (GFL_StrCmdIsWordSet(str)) {
                 u16 param = GFL_WordSetGetCommandParameter(str, 0);
                 u8 category = GFL_StrCmdGetCommandCategory(str);
-                if (category == STRCMD_CATEGORY_WORD && GFL_StrCmdGetCommandIndex(str) == 14) {
+                if (category == STRCMD_CATEGORY_WORD && GFL_StrCmdGetCommandIndex(str) == WORD_CMD_TRAINER_CLASS_NAME) {
                     for (i = param + 1; i < 8; i++) {
                         skip[i]++;
                     }
@@ -364,35 +384,35 @@ static void RegisterArgWords(StrBuf *strbuf, const u32 *args, WordSet *wordSet) 
                     WordSetNumber(wordSet, param, args[arg], digits, 0, 1);
                 } else {
                     switch (GFL_StrCmdGetCommandIndex(str)) {
-                    case 14:
+                    case WORD_CMD_TRAINER_CLASS_NAME:
                         SetTrainerClassName(wordSet, param, args[arg]);
                         break;
-                    case 0:
+                    case WORD_CMD_TRAINER_NAME:
                         SetTrainerName(wordSet, param, args[arg]);
                         break;
-                    case 2:
+                    case WORD_CMD_NICKNAME:
                         if (sWork.trueNames == FALSE) {
                             SetMonNickname(args[arg], param);
                         } else {
                             SetMonTrueNickname(args[arg], param);
                         }
                         break;
-                    case 12:
+                    case WORD_CMD_TRUE_NICKNAME:
                         SetMonTrueNickname(args[arg], param);
                         break;
-                    case 1:
+                    case WORD_CMD_SPECIES_NAME:
                         SetMonSpeciesName(args[arg], param);
                         break;
-                    case 3:
+                    case WORD_CMD_TYPE:
                         loadTypeTextToStrbuf(wordSet, param, args[arg]);
                         break;
-                    case 6:
+                    case WORD_CMD_ABILITY_NAME:
                         loadAbilityNameToStrbuf(wordSet, param, args[arg]);
                         break;
-                    case 7:
+                    case WORD_CMD_MOVE_NAME:
                         loadMoveNameToStrbuf(wordSet, param, args[arg]);
                         break;
-                    case 9:
+                    case WORD_CMD_ITEM_NAME:
                         loadItemNameToStrbuf(wordSet, param, args[arg]);
                         break;
                     case 15:
@@ -431,14 +451,14 @@ static void FormatSetMsgTwoMons(StrBuf *strbuf, u16 message, const u32 *args) {
     int variant = GetMonVariant(args[0]);
 
     switch (variant) {
-    case 0:
+    case MON_VARIANT_PLAYER:
         message = message + GetMonVariant(target);
         // Only this layout matches: the original's case 0 jumps past the test of the other cases
         goto load;
-    case 1:
+    case MON_VARIANT_WILD:
         message += 3;
         break;
-    case 2:
+    case MON_VARIANT_FOE:
         message += 5;
         break;
     }
