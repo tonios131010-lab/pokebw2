@@ -126,6 +126,49 @@ static void DigitalCardCheck_TaskStart(WifiBattleMatchTask *task, u32 *seq, void
     }
 }
 
+// The steps that unregister a Pokémon or the Battle Box
+enum {
+    UNREG_CREATE_CARD,
+    UNREG_WAIT_CARD,
+    UNREG_WAIT_KEY,
+    UNREG_PRINT_REGISTERED,
+    UNREG_OPEN_MENU,
+    UNREG_WAIT_MENU,
+    UNREG_PRINT_WARNING,
+    UNREG_OPEN_CONFIRM,
+    UNREG_WAIT_CONFIRM,
+    UNREG_PRINT_SURE,
+    UNREG_OPEN_SURE,
+    UNREG_WAIT_SURE,
+    UNREG_PRINT_UNREGISTERING,
+    UNREG_UNREGISTER,
+    UNREG_START_SAVE,
+    UNREG_WAIT_SAVE,
+    UNREG_PRINT_DONE,
+    UNREG_WAIT_CARD_DONE,
+    UNREG_END,
+    UNREG_WAIT_PRINT,
+};
+
+// The steps that only show a card
+enum {
+    VIEW_CREATE_CARD,
+    VIEW_WAIT_CARD,
+    VIEW_WAIT_KEY,
+    VIEW_PRINT,
+    VIEW_WAIT_PRINT,
+    VIEW_OPEN_MENU,
+    VIEW_WAIT_MENU,
+    VIEW_WAIT_CARD_DONE,
+    VIEW_END,
+};
+
+enum {
+    NO_CARD_PRINT,
+    NO_CARD_WAIT_PRINT,
+    NO_CARD_END,
+};
+
 static void DigitalCardCheck_TaskCardType1(WifiBattleMatchTask *task, u32 *seq, void *work) {
     DigitalCardCheck *check = work;
     SaveControl *save;
@@ -138,29 +181,29 @@ static void DigitalCardCheck_TaskCardType1(WifiBattleMatchTask *task, u32 *seq, 
     case 0:
         DigitalCardCheck_CreateCard(check);
         DigitalCardCheck_ShowCard(check, 1);
-        *seq = 1;
+        *seq = UNREG_WAIT_CARD;
         break;
     case 1:
         if (DigitalCardCheck_IsCardReady(check)) {
-            *seq = 2;
+            *seq = UNREG_WAIT_KEY;
         }
         break;
     case 2:
         if (GCTX_HIDGetPressedKeys() & 3) {
             GFL_SndSEPlay(SEQ_SE_MESSAGE);
-            *seq = 3;
+            *seq = UNREG_PRINT_REGISTERED;
         }
         break;
     case 3:
         DigitalCardCheck_ClearMessage(check);
         DigitalCardCheck_SetBGEnabled(check, 1);
         DigitalCardCheck_Print(check, EventFishing_Text_ParticipatingCompetitionPleaseRegister, 1);
-        *seq = 19;
-        WifiBattleMatchTask_SetReturnSeq(task, 4);
+        *seq = UNREG_WAIT_PRINT;
+        WifiBattleMatchTask_SetReturnSeq(task, UNREG_OPEN_MENU);
         break;
     case 4:
         DigitalCardCheck_OpenMenu(check, MENU_UNREGISTER_BACK);
-        *seq = 5;
+        *seq = UNREG_WAIT_MENU;
         break;
     case 5:
         choice = DigitalCardCheck_GetMenuChoice(check);
@@ -169,19 +212,19 @@ static void DigitalCardCheck_TaskCardType1(WifiBattleMatchTask *task, u32 *seq, 
         }
         DigitalCardCheck_CloseMenu(check);
         if (choice == 0) {
-            *seq = 6;
+            *seq = UNREG_PRINT_WARNING;
         } else if (choice == 1) {
-            *seq = 17;
+            *seq = UNREG_WAIT_CARD_DONE;
         }
         break;
     case 6:
         DigitalCardCheck_Print(check, EventFishing_Text_OnceUnregisteredWillNot_3, 1);
-        *seq = 19;
-        WifiBattleMatchTask_SetReturnSeq(task, 7);
+        *seq = UNREG_WAIT_PRINT;
+        WifiBattleMatchTask_SetReturnSeq(task, UNREG_OPEN_CONFIRM);
         break;
     case 7:
         DigitalCardCheck_OpenMenu(check, MENU_YES_NO);
-        *seq = 8;
+        *seq = UNREG_WAIT_CONFIRM;
         break;
     case 8:
         choice = DigitalCardCheck_GetMenuChoice(check);
@@ -190,19 +233,19 @@ static void DigitalCardCheck_TaskCardType1(WifiBattleMatchTask *task, u32 *seq, 
         }
         DigitalCardCheck_CloseMenu(check);
         if (choice == 0) {
-            *seq = 9;
+            *seq = UNREG_PRINT_SURE;
         } else if (choice == 1) {
-            *seq = 17;
+            *seq = UNREG_WAIT_CARD_DONE;
         }
         break;
     case 9:
         DigitalCardCheck_Print(check, EventFishing_Text_WillUnregisteredSureAbout_2, 1);
-        *seq = 19;
-        WifiBattleMatchTask_SetReturnSeq(task, 10);
+        *seq = UNREG_WAIT_PRINT;
+        WifiBattleMatchTask_SetReturnSeq(task, UNREG_OPEN_SURE);
         break;
     case 10:
         DigitalCardCheck_OpenMenu(check, MENU_YES_NO);
-        *seq = 11;
+        *seq = UNREG_WAIT_SURE;
         break;
     case 11:
         choice = DigitalCardCheck_GetMenuChoice(check);
@@ -211,15 +254,15 @@ static void DigitalCardCheck_TaskCardType1(WifiBattleMatchTask *task, u32 *seq, 
         }
         DigitalCardCheck_CloseMenu(check);
         if (choice == 0) {
-            *seq = 12;
+            *seq = UNREG_PRINT_UNREGISTERING;
         } else if (choice == 1) {
-            *seq = 17;
+            *seq = UNREG_WAIT_CARD_DONE;
         }
         break;
     case 12:
         DigitalCardCheck_Print(check, EventFishing_Text_BeingUnregisteredDontTurn, 2);
-        *seq = 19;
-        WifiBattleMatchTask_SetReturnSeq(task, 13);
+        *seq = UNREG_WAIT_PRINT;
+        WifiBattleMatchTask_SetReturnSeq(task, UNREG_UNREGISTER);
         break;
     case 13:
         save = GameData_GetSaveControl(check->param.gameData);
@@ -227,28 +270,28 @@ static void DigitalCardCheck_TaskCardType1(WifiBattleMatchTask *task, u32 *seq, 
         box = getBattleBox(save);
         BattleBoxSave_ClearFlags(box, check->param.mode == 0 ? 1 : 2);
         TournamentEntry_SetField(entry, TOURNAMENT_FIELD_UNK15B, 4);
-        *seq = 14;
+        *seq = UNREG_START_SAVE;
         break;
     case 14:
         GameData_StartSave(check->param.gameData);
-        *seq = 15;
+        *seq = UNREG_WAIT_SAVE;
         break;
     case 15:
         result = GameData_UpdateSave(check->param.gameData);
         if (result == 2) {
-            *seq = 16;
+            *seq = UNREG_PRINT_DONE;
         } else if (result == 3) {
-            *seq = 16;
+            *seq = UNREG_PRINT_DONE;
         }
         break;
     case 16:
         DigitalCardCheck_Print(check, EventFishing_Text_HaveBeenUnregisteredFrom, 1);
-        *seq = 19;
-        WifiBattleMatchTask_SetReturnSeq(task, 17);
+        *seq = UNREG_WAIT_PRINT;
+        WifiBattleMatchTask_SetReturnSeq(task, UNREG_WAIT_CARD_DONE);
         break;
     case 17:
         if (DigitalCardCheck_IsCardDone(check)) {
-            *seq = 18;
+            *seq = UNREG_END;
         }
         break;
     case 18:
@@ -274,29 +317,29 @@ static void DigitalCardCheck_TaskCardType2(WifiBattleMatchTask *task, u32 *seq, 
     case 0:
         DigitalCardCheck_CreateCard(check);
         DigitalCardCheck_ShowCard(check, 0);
-        *seq = 1;
+        *seq = UNREG_WAIT_CARD;
         break;
     case 1:
         if (DigitalCardCheck_IsCardReady(check)) {
-            *seq = 2;
+            *seq = UNREG_WAIT_KEY;
         }
         break;
     case 2:
         if (GCTX_HIDGetPressedKeys() & 3) {
             GFL_SndSEPlay(SEQ_SE_MESSAGE);
-            *seq = 3;
+            *seq = UNREG_PRINT_REGISTERED;
         }
         break;
     case 3:
         DigitalCardCheck_ClearMessage(check);
         DigitalCardCheck_SetBGEnabled(check, 1);
         DigitalCardCheck_Print(check, EventFishing_Text_ParticipatingCompetitionBattleBox, 1);
-        *seq = 19;
-        WifiBattleMatchTask_SetReturnSeq(task, 4);
+        *seq = UNREG_WAIT_PRINT;
+        WifiBattleMatchTask_SetReturnSeq(task, UNREG_OPEN_MENU);
         break;
     case 4:
         DigitalCardCheck_OpenMenu(check, MENU_UNREGISTER_BACK);
-        *seq = 5;
+        *seq = UNREG_WAIT_MENU;
         break;
     case 5:
         choice = DigitalCardCheck_GetMenuChoice(check);
@@ -305,19 +348,19 @@ static void DigitalCardCheck_TaskCardType2(WifiBattleMatchTask *task, u32 *seq, 
         }
         DigitalCardCheck_CloseMenu(check);
         if (choice == 0) {
-            *seq = 6;
+            *seq = UNREG_PRINT_WARNING;
         } else if (choice == 1) {
-            *seq = 17;
+            *seq = UNREG_WAIT_CARD_DONE;
         }
         break;
     case 6:
         DigitalCardCheck_Print(check, EventFishing_Text_OnceUnregisteredWillNot_2, 1);
-        *seq = 19;
-        WifiBattleMatchTask_SetReturnSeq(task, 7);
+        *seq = UNREG_WAIT_PRINT;
+        WifiBattleMatchTask_SetReturnSeq(task, UNREG_OPEN_CONFIRM);
         break;
     case 7:
         DigitalCardCheck_OpenMenu(check, MENU_YES_NO);
-        *seq = 8;
+        *seq = UNREG_WAIT_CONFIRM;
         break;
     case 8:
         choice = DigitalCardCheck_GetMenuChoice(check);
@@ -326,19 +369,19 @@ static void DigitalCardCheck_TaskCardType2(WifiBattleMatchTask *task, u32 *seq, 
         }
         DigitalCardCheck_CloseMenu(check);
         if (choice == 0) {
-            *seq = 9;
+            *seq = UNREG_PRINT_SURE;
         } else if (choice == 1) {
-            *seq = 17;
+            *seq = UNREG_WAIT_CARD_DONE;
         }
         break;
     case 9:
         DigitalCardCheck_Print(check, EventFishing_Text_WillUnregisteredSureAbout_2, 1);
-        *seq = 19;
-        WifiBattleMatchTask_SetReturnSeq(task, 10);
+        *seq = UNREG_WAIT_PRINT;
+        WifiBattleMatchTask_SetReturnSeq(task, UNREG_OPEN_SURE);
         break;
     case 10:
         DigitalCardCheck_OpenMenu(check, MENU_YES_NO);
-        *seq = 11;
+        *seq = UNREG_WAIT_SURE;
         break;
     case 11:
         choice = DigitalCardCheck_GetMenuChoice(check);
@@ -347,15 +390,15 @@ static void DigitalCardCheck_TaskCardType2(WifiBattleMatchTask *task, u32 *seq, 
         }
         DigitalCardCheck_CloseMenu(check);
         if (choice == 0) {
-            *seq = 12;
+            *seq = UNREG_PRINT_UNREGISTERING;
         } else if (choice == 1) {
-            *seq = 17;
+            *seq = UNREG_WAIT_CARD_DONE;
         }
         break;
     case 12:
         DigitalCardCheck_Print(check, EventFishing_Text_BeingUnregisteredDontTurn, 2);
-        *seq = 19;
-        WifiBattleMatchTask_SetReturnSeq(task, 13);
+        *seq = UNREG_WAIT_PRINT;
+        WifiBattleMatchTask_SetReturnSeq(task, UNREG_UNREGISTER);
         break;
     case 13:
         save = GameData_GetSaveControl(check->param.gameData);
@@ -363,28 +406,28 @@ static void DigitalCardCheck_TaskCardType2(WifiBattleMatchTask *task, u32 *seq, 
         box = getBattleBox(save);
         BattleBoxSave_ClearFlags(box, check->param.mode == 0 ? 1 : 2);
         TournamentEntry_SetField(entry, TOURNAMENT_FIELD_UNK15B, 4);
-        *seq = 14;
+        *seq = UNREG_START_SAVE;
         break;
     case 14:
         GameData_StartSave(check->param.gameData);
-        *seq = 15;
+        *seq = UNREG_WAIT_SAVE;
         break;
     case 15:
         result = GameData_UpdateSave(check->param.gameData);
         if (result == 2) {
-            *seq = 16;
+            *seq = UNREG_PRINT_DONE;
         } else if (result == 3) {
-            *seq = 16;
+            *seq = UNREG_PRINT_DONE;
         }
         break;
     case 16:
         DigitalCardCheck_Print(check, EventFishing_Text_BattleBoxHasBeen_2, 1);
-        *seq = 19;
-        WifiBattleMatchTask_SetReturnSeq(task, 17);
+        *seq = UNREG_WAIT_PRINT;
+        WifiBattleMatchTask_SetReturnSeq(task, UNREG_WAIT_CARD_DONE);
         break;
     case 17:
         if (DigitalCardCheck_IsCardDone(check)) {
-            *seq = 18;
+            *seq = UNREG_END;
         }
         break;
     case 18:
@@ -406,33 +449,33 @@ static void DigitalCardCheck_TaskCardType3(WifiBattleMatchTask *task, u32 *seq, 
     case 0:
         DigitalCardCheck_CreateCard(check);
         DigitalCardCheck_ShowCard(check, 1);
-        *seq = 1;
+        *seq = VIEW_WAIT_CARD;
         break;
     case 1:
         if (DigitalCardCheck_IsCardReady(check)) {
-            *seq = 2;
+            *seq = VIEW_WAIT_KEY;
         }
         break;
     case 2:
         if (GCTX_HIDGetPressedKeys() & 3) {
             GFL_SndSEPlay(SEQ_SE_MESSAGE);
-            *seq = 3;
+            *seq = VIEW_PRINT;
         }
         break;
     case 3:
         DigitalCardCheck_ClearMessage(check);
         DigitalCardCheck_SetBGEnabled(check, 1);
         DigitalCardCheck_Print(check, EventFishing_Text_CompetitionHasAlreadyEnded, 1);
-        *seq = 4;
+        *seq = VIEW_WAIT_PRINT;
         break;
     case 4:
         if (DigitalCardCheck_IsPrinted(check)) {
-            *seq = 5;
+            *seq = VIEW_OPEN_MENU;
         }
         break;
     case 5:
         DigitalCardCheck_OpenMenu(check, MENU_BACK);
-        *seq = 6;
+        *seq = VIEW_WAIT_MENU;
         break;
     case 6:
         choice = DigitalCardCheck_GetMenuChoice(check);
@@ -441,12 +484,12 @@ static void DigitalCardCheck_TaskCardType3(WifiBattleMatchTask *task, u32 *seq, 
         }
         DigitalCardCheck_CloseMenu(check);
         if (choice == 0) {
-            *seq = 7;
+            *seq = VIEW_WAIT_CARD_DONE;
         }
         break;
     case 7:
         if (DigitalCardCheck_IsCardDone(check)) {
-            *seq = 8;
+            *seq = VIEW_END;
         }
         break;
     case 8:
@@ -463,33 +506,33 @@ static void DigitalCardCheck_TaskCardType4(WifiBattleMatchTask *task, u32 *seq, 
     case 0:
         DigitalCardCheck_CreateCard(check);
         DigitalCardCheck_ShowCard(check, 1);
-        *seq = 1;
+        *seq = VIEW_WAIT_CARD;
         break;
     case 1:
         if (DigitalCardCheck_IsCardReady(check)) {
-            *seq = 2;
+            *seq = VIEW_WAIT_KEY;
         }
         break;
     case 2:
         if (GCTX_HIDGetPressedKeys() & 3) {
             GFL_SndSEPlay(SEQ_SE_MESSAGE);
-            *seq = 3;
+            *seq = VIEW_PRINT;
         }
         break;
     case 3:
         DigitalCardCheck_ClearMessage(check);
         DigitalCardCheck_SetBGEnabled(check, 1);
         DigitalCardCheck_Print(check, EventFishing_Text_UnregisteredFromCompetition, 1);
-        *seq = 4;
+        *seq = VIEW_WAIT_PRINT;
         break;
     case 4:
         if (DigitalCardCheck_IsPrinted(check)) {
-            *seq = 5;
+            *seq = VIEW_OPEN_MENU;
         }
         break;
     case 5:
         DigitalCardCheck_OpenMenu(check, MENU_BACK);
-        *seq = 6;
+        *seq = VIEW_WAIT_MENU;
         break;
     case 6:
         choice = DigitalCardCheck_GetMenuChoice(check);
@@ -498,12 +541,12 @@ static void DigitalCardCheck_TaskCardType4(WifiBattleMatchTask *task, u32 *seq, 
         }
         DigitalCardCheck_CloseMenu(check);
         if (choice == 0) {
-            *seq = 7;
+            *seq = VIEW_WAIT_CARD_DONE;
         }
         break;
     case 7:
         if (DigitalCardCheck_IsCardDone(check)) {
-            *seq = 8;
+            *seq = VIEW_END;
         }
         break;
     case 8:
@@ -520,33 +563,33 @@ static void DigitalCardCheck_TaskCardType5(WifiBattleMatchTask *task, u32 *seq, 
     case 0:
         DigitalCardCheck_CreateCard(check);
         DigitalCardCheck_ShowCard(check, 1);
-        *seq = 1;
+        *seq = VIEW_WAIT_CARD;
         break;
     case 1:
         if (DigitalCardCheck_IsCardReady(check)) {
-            *seq = 2;
+            *seq = VIEW_WAIT_KEY;
         }
         break;
     case 2:
         if (GCTX_HIDGetPressedKeys() & 3) {
             GFL_SndSEPlay(SEQ_SE_MESSAGE);
-            *seq = 3;
+            *seq = VIEW_PRINT;
         }
         break;
     case 3:
         DigitalCardCheck_ClearMessage(check);
         DigitalCardCheck_SetBGEnabled(check, 1);
         DigitalCardCheck_Print(check, EventFishing_Text_YouveBeenUnregisteredFrom, 1);
-        *seq = 4;
+        *seq = VIEW_WAIT_PRINT;
         break;
     case 4:
         if (DigitalCardCheck_IsPrinted(check)) {
-            *seq = 5;
+            *seq = VIEW_OPEN_MENU;
         }
         break;
     case 5:
         DigitalCardCheck_OpenMenu(check, MENU_BACK);
-        *seq = 6;
+        *seq = VIEW_WAIT_MENU;
         break;
     case 6:
         choice = DigitalCardCheck_GetMenuChoice(check);
@@ -555,12 +598,12 @@ static void DigitalCardCheck_TaskCardType5(WifiBattleMatchTask *task, u32 *seq, 
         }
         DigitalCardCheck_CloseMenu(check);
         if (choice == 0) {
-            *seq = 7;
+            *seq = VIEW_WAIT_CARD_DONE;
         }
         break;
     case 7:
         if (DigitalCardCheck_IsCardDone(check)) {
-            *seq = 8;
+            *seq = VIEW_END;
         }
         break;
     case 8:
@@ -575,11 +618,11 @@ static void DigitalCardCheck_TaskNoCard(WifiBattleMatchTask *task, u32 *seq, voi
     switch (*seq) {
     case 0:
         DigitalCardCheck_Print(check, EventFishing_Text_DontHaveAnyDigital, 1);
-        *seq = 1;
+        *seq = NO_CARD_WAIT_PRINT;
         break;
     case 1:
         if (DigitalCardCheck_IsPrinted(check)) {
-            *seq = 2;
+            *seq = NO_CARD_END;
         }
         break;
     case 2:
