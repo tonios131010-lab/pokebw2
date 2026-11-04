@@ -510,7 +510,7 @@ u8 BattleMon_FindMoveSlot(BattleMon *mon, u16 move) {
             }
         }
     }
-    return 4;
+    return BTL_MOVE_SLOT_NONE;
 }
 
 void splitTypeCore(BattleMon *mon, u8 *type1, u8 *type2) {
@@ -822,7 +822,7 @@ u32 BattleMon_GetSemiInvulnFlag(BattleMon *mon) {
 }
 
 BOOL IsSemiInvulnMove(BattleMon *mon) {
-    if (BattleMon_GetSemiInvulnFlag(mon) != 0x10) {
+    if (BattleMon_GetSemiInvulnFlag(mon) != BTL_SEMI_INVULN_NONE) {
         return TRUE;
     }
     return FALSE;
@@ -1531,14 +1531,14 @@ void BattleMon_AddDamageRecord(BattleMon *mon, const BattleMonDamageRecord *reco
 
     turn = mon->damageRecordTurn;
     count = mon->damageRecordCounts[turn];
-    if (count == 6) {
+    if (count == BTL_DAMAGE_RECORD_MAX) {
         for (i = 0; i < 5; i++) {
             mon->damageRecords[turn][i] = mon->damageRecords[turn][i + 1];
         }
         count--;
     }
     mon->damageRecords[turn][count] = *record;
-    if (mon->damageRecordCounts[turn] < 6) {
+    if (mon->damageRecordCounts[turn] < BTL_DAMAGE_RECORD_MAX) {
         mon->damageRecordCounts[turn]++;
     }
 }

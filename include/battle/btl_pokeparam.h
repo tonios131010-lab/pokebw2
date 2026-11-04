@@ -327,6 +327,12 @@ void SetIllusionDisguise(BattleMon *mon, PartyPkm *disguise);
 s8 *BattleMon_GetStatStagePtr(BattleMon *mon, u32 stat, s8 *min, s8 *max);
 BOOL IsStatChangeValid(BattleMon *mon, u32 stat, s32 change);
 BOOL AreStatsLowered(BattleMon *mon);
+// What BattleMon_GetSemiInvulnFlag returns when the mon is not in the middle of a two-turn move
+#define BTL_SEMI_INVULN_NONE 0x10
+
+// How many hits a turn of the damage record holds
+#define BTL_DAMAGE_RECORD_MAX 6
+
 u32 BattleMon_GetSemiInvulnFlag(BattleMon *mon);
 BattleCondition ZeroConditionTurns(void);
 BOOL Condition_IsNull(BattleCondition condition);
@@ -356,6 +362,12 @@ u8 BattleMon_GetPPOfMove(const BattleMon *mon, u16 move);
 void Move_DecrementPP(BattleMon *mon, u8 index, u8 amount);
 void Move_DecrementPP_Org(BattleMon *mon, u8 index, u8 amount);
 void Move_SetUsed(BattleMon *mon, u8 index);
+// The ID that stands for no mon, as a target that was not found
+#define BTL_MON_ID_NONE 0x1f
+
+// What BattleMon_FindMoveSlot returns when the mon does not know the move
+#define BTL_MOVE_SLOT_NONE 4
+
 u8 BattleMon_FindMoveSlot(BattleMon *mon, u16 move);
 void SetItem(BattleMon *mon, u16 item);
 u32 BattleMon_RaiseStatStage(BattleMon *mon, u32 stat, u8 amount);
