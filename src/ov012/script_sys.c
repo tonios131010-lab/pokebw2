@@ -25,6 +25,9 @@
 #include "system/main.h"
 #include "system/vm.h"
 
+// What the script lookups return when there is no script
+#define SCRID_NONE 0xffff
+
 // A range of global script IDs, with its script file and text bank
 struct GlobalScriptEntry {
     u16 start;
@@ -430,11 +433,11 @@ u32 FieldScript_CallZoneInitCore(GameSystem *gsys, u32 unused, u32 mode, u32 fea
     script = GetZoneInitScrPointer(eventData);
     do {
         script = FieldScript_GetInitSCRID(script, mode, &scriptId);
-        if (scriptId != 0xffff) {
+        if (scriptId != SCRID_NONE) {
             FieldScript_Run(gsys, NULL, scriptId, featureLevel);
             result = 1;
         }
-    } while (scriptId != 0xffff);
+    } while (scriptId != SCRID_NONE);
     return result;
 }
 
@@ -464,7 +467,7 @@ GameEvent *FieldScript_CheckSceneChangeEvent(GameSystem *gsys, HeapID heapId) {
     gameData = GSYS_GetGameData(gsys);
     eventData = GameData_GetEventData(gameData);
     scriptId = FieldScript_GetSceneChangeSCRID(gameData, GetZoneInitScrPointer(eventData), 1);
-    if (scriptId == 0xffff) {
+    if (scriptId == SCRID_NONE) {
         return NULL;
     }
     return EventScriptCall_Create(gsys, scriptId, NULL, heapId);
