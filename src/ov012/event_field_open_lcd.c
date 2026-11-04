@@ -23,19 +23,25 @@ GameEvent *EventFieldOpenRestoreLCD_Create(GameSystem *gsys) {
     return event;
 }
 
+typedef enum {
+    FIELD_OPEN_RESTORE_LCD_STEP_OPEN_FIELD,
+    FIELD_OPEN_RESTORE_LCD_STEP_RESTORE_SURFACE,
+    FIELD_OPEN_RESTORE_LCD_STEP_DONE,
+} FieldOpenRestoreLCDStep;
+
 static GameEventReturnCode EventFieldOpenRestoreLCD_Callback(GameEvent *event, u32 *state, void *work) {
     FieldOpenRestoreLCDData *data = work;
 
     switch (*state) {
-    case 0:
+    case FIELD_OPEN_RESTORE_LCD_STEP_OPEN_FIELD:
         GameEvent_ChainNext(event, EventFieldOpen_CreateHeadless(data->gsys));
         (*state)++;
         break;
-    case 1:
+    case FIELD_OPEN_RESTORE_LCD_STEP_RESTORE_SURFACE:
         FieldG3D_RestoreSurface(GSYS_GetField(data->gsys));
         (*state)++;
         break;
-    case 2:
+    case FIELD_OPEN_RESTORE_LCD_STEP_DONE:
         return GAMEEVENT_DONE;
     }
     return GAMEEVENT_CONTINUE;
