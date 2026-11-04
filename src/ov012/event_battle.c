@@ -16,6 +16,7 @@
 #include "constants/version.h"
 #include "dsprot/dsprot.h"
 #include "field/badge_gate.h"
+#include "field/enc_pokeset.h"
 #include "field/encounter.h"
 #include "field/event_battle.h"
 #include "field/event_battle_lose.h"
@@ -161,13 +162,20 @@ static u16 sSpecialBeaconTrainerClasses[7] = {
     TRAINER_CLASS_PKMN_TRAINER_CILAN,
 };
 
+typedef enum {
+    WILD_BATTLE_CALL_STEP_START_BATTLE,
+    WILD_BATTLE_CALL_STEP_HANDLE_RESULT,
+    WILD_BATTLE_CALL_STEP_WAIT_TRANSITION,
+    WILD_BATTLE_CALL_STEP_DONE,
+} WildBattleCallStep;
+
 static GameEventReturnCode EventWildBattleCall_Callback(GameEvent *event, u32 *state, void *work) {
     EventWildBattleCallWork *wk = work;
     GameSystem *gsys = wk->gsys;
     GameData *gameData = GSYS_GetGameData(gsys);
 
     switch (*state) {
-    case 0: {
+    case WILD_BATTLE_CALL_STEP_START_BATTLE: {
         GameEvent *battle = GameEvent_Create(gsys, NULL, EventBattleCall_Callback, sizeof(EventBattleCallWork));
         EventBattleCallWork *battleWork = GameEvent_GetData(battle);
         PartyPkm *pkm;
@@ -186,11 +194,11 @@ static GameEventReturnCode EventWildBattleCall_Callback(GameEvent *event, u32 *s
         (*state)++;
         break;
     }
-    case 1: {
+    case WILD_BATTLE_CALL_STEP_HANDLE_RESULT: {
         u32 result = GameData_GetLastBtlResult(gameData);
         BOOL defeat = IsBattleResultDefeat(result, 0);
 
-        if (result == BTL_RESULT_CAPTURE && wk->specialIndex != 0xff) {
+        if (result == BTL_RESULT_CAPTURE && wk->specialIndex != N_POKE_NONE) {
             EncountSave *save = SaveControl_GetEncountSave(GameData_GetSaveControl(gameData));
 
             SetNPokeCaught(save, wk->specialIndex);
@@ -219,10 +227,10 @@ static GameEventReturnCode EventWildBattleCall_Callback(GameEvent *event, u32 *s
         (*state)++;
         break;
     }
-    case 2:
+    case WILD_BATTLE_CALL_STEP_WAIT_TRANSITION:
         (*state)++;
         break;
-    case 3:
+    case WILD_BATTLE_CALL_STEP_DONE:
         CommPlayerSupport_Init(GameData_GetCommPlayerSupport(gameData));
         return GAMEEVENT_DONE;
     }
