@@ -31,11 +31,19 @@ GameEvent *Event3DDemo_Create(GameSystem *gsys, GameEvent *parent, u32 demoId, u
     return event;
 }
 
+typedef enum {
+    EVENT_3D_DEMO_STEP_PAUSE_COMM,
+    EVENT_3D_DEMO_STEP_WAIT_COMM_EXIT,
+    EVENT_3D_DEMO_STEP_START_DEMO,
+    EVENT_3D_DEMO_STEP_WAIT_DEMO,
+    EVENT_3D_DEMO_STEP_DONE,
+} Event3DDemoStep;
+
 GameEventReturnCode Event3DDemo_Callback(GameEvent *event, u32 *state, void *data) {
     Event3DDemoWork *work = data;
 
     switch (*state) {
-    case 0:
+    case EVENT_3D_DEMO_STEP_PAUSE_COMM:
         work->savedState = GSYS_IsGameCommPaused(work->gameSystem);
         GSYS_SetGameCommPaused(work->gameSystem, 1);
         if (!GameCommSys_BootCheck(work->gameCommSys)) {
@@ -45,16 +53,16 @@ GameEventReturnCode Event3DDemo_Callback(GameEvent *event, u32 *state, void *dat
             (*state)++;
         }
         break;
-    case 1:
+    case EVENT_3D_DEMO_STEP_WAIT_COMM_EXIT:
         if (!GameCommSys_BootCheck(work->gameCommSys)) {
             (*state)++;
         }
         break;
-    case 2:
+    case EVENT_3D_DEMO_STEP_START_DEMO:
         GSYS_QueueProc(work->gameSystem, OVERLAY_DEMO3D, &gDemo3DProcFunctions, &work->param);
         (*state)++;
         break;
-    case 3:
+    case EVENT_3D_DEMO_STEP_WAIT_DEMO:
         if (GSYS_GetProcMgrState(work->gameSystem)) {
             break;
         }
@@ -67,7 +75,7 @@ GameEventReturnCode Event3DDemo_Callback(GameEvent *event, u32 *state, void *dat
         }
         (*state)++;
         break;
-    case 4:
+    case EVENT_3D_DEMO_STEP_DONE:
         return GAMEEVENT_DONE;
     }
     return GAMEEVENT_CONTINUE;
